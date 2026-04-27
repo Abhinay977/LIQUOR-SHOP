@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquor Shop Profit Calculator</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a',
+                        darkCard: '#1e293b',
+                        darkBorder: '#334155'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="index.css">
+</head>
+<body class="bg-gray-50 text-slate-800 dark:bg-darkBg dark:text-slate-200 transition-colors duration-200 font-sans">
+    
+    <div class="max-w-[1800px] mx-auto p-2 md:p-4 flex flex-col h-[100dvh]">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-4 md:mb-6 gap-3 md:gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-3">
+                    <i class="fa-solid fa-wine-bottle"></i> Liquor Shop Calculator
+                </h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Profit & Inventory Management System</p>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="toggleDarkMode()" class="px-3 py-2 rounded-lg bg-white dark:bg-darkCard shadow border border-slate-200 dark:border-darkBorder hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:inline text-amber-400"></i>
+                </button>
+
+                <button onclick="toggleHistoryMode()" class="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white shadow transition-colors flex items-center gap-2 font-medium" title="View past daily records">
+                    <i class="fa-solid fa-clock-rotate-left"></i> <span class="hidden sm:inline">History</span>
+                </button>
+                <button onclick="startNewDay()" class="px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white shadow transition-colors flex items-center gap-2 font-medium" title="Save today's data to history and clear quantities">
+                    <i class="fa-solid fa-calendar-plus"></i> <span class="hidden sm:inline">New Day</span>
+                </button>
+                <button onclick="resetData()" class="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white shadow transition-colors flex items-center gap-2 font-medium">
+                    <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Reset All</span>
+                </button>
+            </div>
+        </header>
+
+        <div id="main-app-content" class="flex flex-col flex-grow min-h-0">
+            <!-- Dashboard -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white dark:bg-darkCard p-4 rounded-xl shadow-sm border border-slate-200 dark:border-darkBorder flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-tags"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Total Brands</p>
+                    <p class="text-2xl font-bold" id="dash-brands">0</p>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-darkCard p-4 rounded-xl shadow-sm border border-slate-200 dark:border-darkBorder flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Total Bottles Sold</p>
+                    <p class="text-2xl font-bold" id="dash-bottles">0</p>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-darkCard p-4 rounded-xl shadow-sm border border-slate-200 dark:border-darkBorder flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Grand Total Profit</p>
+                    <p class="text-2xl font-bold" id="dash-profit">₹0.00</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="flex justify-between items-center mb-4 gap-4 flex-wrap">
+            <div class="relative max-w-sm w-full">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-input" oninput="filterTable()" placeholder="Search brand names..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-darkBorder bg-white dark:bg-darkCard focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
+            <button onclick="addRow()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow transition-colors flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-plus"></i> Add Brand Row
+            </button>
+        </div>
+
+        <!-- Table Container -->
+        <div class="table-wrapper bg-white dark:bg-darkCard rounded-xl shadow border border-slate-200 dark:border-darkBorder flex-grow min-h-0 relative">
+            <table class="min-w-max w-full text-sm text-left border-collapse">
+                <thead class="text-xs uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b-2 border-slate-300 dark:border-slate-600">
+                    <!-- Top Header Row -->
+                    <tr>
+                        <th rowspan="2" class="sticky-col bg-slate-100 dark:bg-slate-800 p-3 border-r border-b border-slate-300 dark:border-slate-600 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Brand Name</th>
+                        <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300">MRP</th>
+                        <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-pink-50 dark:bg-pink-900/20 text-pink-800 dark:text-pink-300">Discount</th>
+                        <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-orange-50 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300">Buying Cost</th>
+                        <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-purple-50 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300">MRP QTY SOLD</th>
+                        <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">DISCOUNT QTY SOLD</th>
+                        <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-800 dark:text-cyan-300">TOTAL MRP PROFIT</th>
+                        <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300">TOTAL DISCOUNT PROFIT</th>
+
+                        <th rowspan="2" class="text-center p-3 border-r border-b border-slate-300 dark:border-slate-600 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300">Brand Profit</th>
+                        <th rowspan="2" class="text-center p-3 border-b border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800">Actions</th>
+                    </tr>
+                    <!-- Sub Header Row -->
+                    <tr id="sub-headers">
+                        <!-- Injected via JS -->
+                    </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-slate-200 dark:divide-slate-700">
+                    <!-- Rows injected via JS -->
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+        <!-- History Content -->
+        <div id="history-content" class="hidden flex-col flex-grow min-h-0">
+            <!-- History Toolbar -->
+            <div class="flex justify-between items-center mb-6 bg-white dark:bg-darkCard p-4 rounded-xl shadow border border-slate-200 dark:border-darkBorder">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleHistoryMode()" class="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                        <i class="fa-solid fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-xl font-bold text-slate-800 dark:text-slate-200">Historical Data Viewer</h2>
+                </div>
+            </div>
+
+            <!-- History Feed Placeholder -->
+            <div id="history-feed" class="flex flex-col flex-grow min-h-0 gap-6 overflow-y-auto pb-10">
+                <!-- Injected via JS -->
+            </div>
+            
+            <div id="history-empty-state" class="flex flex-col items-center justify-center flex-grow text-slate-400 hidden">
+                <i class="fa-solid fa-clock-rotate-left text-5xl mb-4 opacity-50"></i>
+                <p>No historical data available.</p>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Application Logic -->
+    <script src="script.js"></script>
+</body>
+</html>
