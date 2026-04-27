@@ -86,7 +86,9 @@
         }
 
         function updateRowCalculations(row) {
-            let brandProfit = 0;
+            let totalMrpProfit = 0;
+            let totalDiscProfit = 0;
+            
             ['q', 'p', 'n'].forEach(size => {
                 const mrp = parseFloat(row.mrp[size]) || 0;
                 const disc = parseFloat(row.discount[size]) || 0;
@@ -94,28 +96,28 @@
                 const qty = parseFloat(row.qty[size]) || 0;
                 const dqty = row.dqty ? (parseFloat(row.dqty[size]) || 0) : 0;
                 
-                const tmp = (mrp - cost) * qty;
-                const tdp = (disc - cost) * dqty;
-                
-                brandProfit += tmp + tdp;
-                
-                const tmpEl = document.getElementById(`tmp_${size}_${row.id}`);
-                if(tmpEl) {
-                    tmpEl.textContent = formatMoney(tmp);
-                    tmpEl.className = getColorClass(tmp, "p-2 border-r border-slate-200 dark:border-slate-700 text-right font-medium bg-cyan-50/30 dark:bg-cyan-900/10");
-                }
-                
-                const tdpEl = document.getElementById(`tdp_${size}_${row.id}`);
-                if(tdpEl) {
-                    tdpEl.textContent = formatMoney(tdp);
-                    tdpEl.className = getColorClass(tdp, "p-2 border-r border-slate-200 dark:border-slate-700 text-right font-medium bg-emerald-50/30 dark:bg-emerald-900/10");
-                }
+                totalMrpProfit += (mrp - cost) * qty;
+                totalDiscProfit += (disc - cost) * dqty;
             });
+            
+            let brandProfit = totalMrpProfit + totalDiscProfit;
+            
+            const tmpEl = document.getElementById(`tmp_total_${row.id}`);
+            if(tmpEl) {
+                tmpEl.textContent = '₹' + formatMoney(totalMrpProfit);
+                tmpEl.className = getColorClass(totalMrpProfit, "p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-cyan-50/30 dark:bg-cyan-900/10 whitespace-nowrap");
+            }
+            
+            const tdpEl = document.getElementById(`tdp_total_${row.id}`);
+            if(tdpEl) {
+                tdpEl.textContent = '₹' + formatMoney(totalDiscProfit);
+                tdpEl.className = getColorClass(totalDiscProfit, "p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-emerald-50/30 dark:bg-emerald-900/10 whitespace-nowrap");
+            }
             
             const bpEl = document.getElementById(`bp_${row.id}`);
             if(bpEl) {
-                bpEl.textContent = formatMoney(brandProfit);
-                bpEl.className = getColorClass(brandProfit, "p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-amber-50/50 dark:bg-amber-900/20 text-base");
+                bpEl.textContent = '₹' + formatMoney(brandProfit);
+                bpEl.className = getColorClass(brandProfit, "p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-amber-50/50 dark:bg-amber-900/20 text-base whitespace-nowrap");
             }
         }
 
@@ -158,9 +160,7 @@
                 { bg: 'bg-pink-50/50 dark:bg-pink-900/10' },
                 { bg: 'bg-orange-50/50 dark:bg-orange-900/10' },
                 { bg: 'bg-purple-50/50 dark:bg-purple-900/10' },
-                { bg: 'bg-indigo-50/50 dark:bg-indigo-900/10' },
-                { bg: 'bg-cyan-50/50 dark:bg-cyan-900/10' },
-                { bg: 'bg-emerald-50/50 dark:bg-emerald-900/10' }
+                { bg: 'bg-indigo-50/50 dark:bg-indigo-900/10' }
             ];
 
             groups.forEach(g => {
@@ -219,15 +219,9 @@
                     ${renderInput('dqty', 'p', false)}
                     ${renderInput('dqty', 'n', true)}
                     
-                    ${renderOutput('tmp', 'q', false)}
-                    ${renderOutput('tmp', 'p', false)}
-                    ${renderOutput('tmp', 'n', true)}
-                    
-                    ${renderOutput('tdp', 'q', false)}
-                    ${renderOutput('tdp', 'p', false)}
-                    ${renderOutput('tdp', 'n', true)}
-                    
-                    <td id="bp_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-amber-50/30 dark:bg-amber-900/10 text-base">0.00</td>
+                    <td id="tmp_total_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-cyan-50/30 dark:bg-cyan-900/10 whitespace-nowrap">₹0.00</td>
+                    <td id="tdp_total_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-emerald-50/30 dark:bg-emerald-900/10 whitespace-nowrap">₹0.00</td>
+                    <td id="bp_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-amber-50/30 dark:bg-amber-900/10 text-base text-amber-700 dark:text-amber-500 whitespace-nowrap">₹0.00</td>
                     
                     <td class="p-2 text-center bg-white dark:bg-darkCard group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80 transition-colors">
                         <button onclick="deleteRow('${row.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete Row">
@@ -325,8 +319,8 @@
                             <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-orange-50 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300">Buying Cost</th>
                             <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-purple-50 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300">MRP QTY SOLD</th>
                             <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">DISCOUNT QTY SOLD</th>
-                            <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-800 dark:text-cyan-300">TOTAL MRP PROFIT</th>
-                            <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300">TOTAL DISCOUNT PROFIT</th>
+                            <th rowspan="2" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-800 dark:text-cyan-300">TOTAL MRP PROFIT</th>
+                            <th rowspan="2" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300">TOTAL DISCOUNT PROFIT</th>
                             <th rowspan="2" class="text-center p-2 border-b border-slate-300 dark:border-slate-600 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300">Brand Profit</th>
                         </tr>
                         <tr>
@@ -337,41 +331,42 @@
                     { bg: 'bg-pink-50/50 dark:bg-pink-900/10' },
                     { bg: 'bg-orange-50/50 dark:bg-orange-900/10' },
                     { bg: 'bg-purple-50/50 dark:bg-purple-900/10' },
-                    { bg: 'bg-indigo-50/50 dark:bg-indigo-900/10' },
-                    { bg: 'bg-cyan-50/50 dark:bg-cyan-900/10' },
-                    { bg: 'bg-emerald-50/50 dark:bg-emerald-900/10' }
+                    { bg: 'bg-indigo-50/50 dark:bg-indigo-900/10' }
                 ];
                 groups.forEach(g => {
-                    ['Q', 'P', 'N'].forEach(size => { tableHtml += `<th class="p-1 border-r border-b border-slate-300 dark:border-slate-600 w-16 text-center ${g.bg}">${size}</th>`; });
+                    ['Q', 'P', 'N'].forEach((size, idx) => {
+                        const bClass = idx === 2 ? 'border-r-2 border-slate-400 dark:border-slate-500' : 'border-r border-slate-300 dark:border-slate-600';
+                        tableHtml += `<th class="p-1 border-b border-slate-300 dark:border-slate-600 w-16 text-center ${bClass} ${g.bg}">${size}</th>`; 
+                    });
                 });
                 tableHtml += `</tr></thead><tbody class="divide-y divide-slate-200 dark:divide-slate-700">`;
 
                 record.data.forEach(row => {
                     let bp = 0;
-                    let tmpArr = {}, tdpArr = {};
+                    let totalMrp = 0, totalDisc = 0;
                     ['q', 'p', 'n'].forEach(s => {
                         const m = parseFloat(row.mrp[s]) || 0;
                         const d = parseFloat(row.discount[s]) || 0;
                         const c = parseFloat(row.cost[s]) || 0;
                         const q = parseFloat(row.qty[s]) || 0;
                         const dq = row.dqty ? (parseFloat(row.dqty[s]) || 0) : 0;
-                        tmpArr[s] = (m - c) * q;
-                        tdpArr[s] = (d - c) * dq;
-                        bp += tmpArr[s] + tdpArr[s];
+                        totalMrp += (m - c) * q;
+                        totalDisc += (d - c) * dq;
                     });
+                    bp = totalMrp + totalDisc;
                     
-                    const tdText = (val) => `<td class="p-1 border-r border-slate-200 dark:border-slate-700 text-right">${val || ''}</td>`;
-                    const tdMoney = (val, colorClass) => `<td class="p-1 border-r border-slate-200 dark:border-slate-700 text-right ${getColorClass(val, colorClass)}">${formatMoney(val)}</td>`;
+                    const tdText = (val, isLast) => `<td class="p-1 ${isLast ? 'border-r-2 border-slate-400 dark:border-slate-500' : 'border-r border-slate-200 dark:border-slate-700'} text-right">${val || ''}</td>`;
+                    const tdMoney = (val, colorClass) => `<td class="p-2 border-r border-slate-200 dark:border-slate-700 text-right font-bold ${getColorClass(val, colorClass)} whitespace-nowrap">₹${formatMoney(val)}</td>`;
                     
                     tableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td class="sticky-col bg-white dark:bg-darkCard p-1 border-r border-slate-200 dark:border-slate-700 font-bold z-10 text-xs">${row.name || '-'}</td>
-                        ${tdText(row.mrp.q)}${tdText(row.mrp.p)}${tdText(row.mrp.n)}
-                        ${tdText(row.discount.q)}${tdText(row.discount.p)}${tdText(row.discount.n)}
-                        ${tdText(row.cost.q)}${tdText(row.cost.p)}${tdText(row.cost.n)}
-                        ${tdText(row.qty.q)}${tdText(row.qty.p)}${tdText(row.qty.n)}
-                        ${tdText(row.dqty ? row.dqty.q : '')}${tdText(row.dqty ? row.dqty.p : '')}${tdText(row.dqty ? row.dqty.n : '')}
-                        ${tdMoney(tmpArr.q, 'bg-cyan-50/30 dark:bg-cyan-900/10')}${tdMoney(tmpArr.p, 'bg-cyan-50/30 dark:bg-cyan-900/10')}${tdMoney(tmpArr.n, 'bg-cyan-50/30 dark:bg-cyan-900/10')}
-                        ${tdMoney(tdpArr.q, 'bg-emerald-50/30 dark:bg-emerald-900/10')}${tdMoney(tdpArr.p, 'bg-emerald-50/30 dark:bg-emerald-900/10')}${tdMoney(tdpArr.n, 'bg-emerald-50/30 dark:bg-emerald-900/10')}
+                        ${tdText(row.mrp.q, false)}${tdText(row.mrp.p, false)}${tdText(row.mrp.n, true)}
+                        ${tdText(row.discount.q, false)}${tdText(row.discount.p, false)}${tdText(row.discount.n, true)}
+                        ${tdText(row.cost.q, false)}${tdText(row.cost.p, false)}${tdText(row.cost.n, true)}
+                        ${tdText(row.qty.q, false)}${tdText(row.qty.p, false)}${tdText(row.qty.n, true)}
+                        ${tdText(row.dqty ? row.dqty.q : '', false)}${tdText(row.dqty ? row.dqty.p : '', false)}${tdText(row.dqty ? row.dqty.n : '', true)}
+                        ${tdMoney(totalMrp, 'bg-cyan-50/30 dark:bg-cyan-900/10')}
+                        ${tdMoney(totalDisc, 'bg-emerald-50/30 dark:bg-emerald-900/10')}
                         ${tdMoney(bp, 'font-bold bg-amber-50/50 dark:bg-amber-900/20')}
                     </tr>`;
                 });
