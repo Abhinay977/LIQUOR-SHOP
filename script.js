@@ -164,8 +164,9 @@
             ];
 
             groups.forEach(g => {
-                ['Q', 'P', 'N'].forEach(size => {
-                    html += `<th class="p-2 border-r border-b border-slate-300 dark:border-slate-600 w-20 text-center ${g.bg}">${size}</th>`;
+                ['Q', 'P', 'N'].forEach((size, index) => {
+                    const borderClass = index === 2 ? 'border-r-2 border-slate-400 dark:border-slate-500' : 'border-r border-slate-300 dark:border-slate-600';
+                    html += `<th class="p-2 border-b border-slate-300 dark:border-slate-600 w-20 text-center ${borderClass} ${g.bg}">${size}</th>`;
                 });
             });
             
@@ -181,50 +182,50 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group";
                 
-                const renderInput = (field, size) => `
-                    <td class="p-1 border-r border-slate-200 dark:border-slate-700">
+                const renderInput = (field, size, isLast) => `
+                    <td class="p-1 ${isLast ? 'border-r-2 border-slate-400 dark:border-slate-500' : 'border-r border-slate-200 dark:border-slate-700'}">
                         <input type="number" step="any" value="${row[field][size]}" oninput="updateData('${row.id}', '${field}', '${size}', this.value)" 
                         class="w-full min-w-[65px] text-right p-1.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all shadow-inner">
                     </td>
                 `;
 
-                const renderOutput = (prefix, size) => `
-                    <td id="${prefix}_${size}_${row.id}" class="p-2 border-r border-slate-200 dark:border-slate-700 text-right font-medium">0.00</td>
+                const renderOutput = (prefix, size, isLast) => `
+                    <td id="${prefix}_${size}_${row.id}" class="p-2 ${isLast ? 'border-r-2 border-slate-400 dark:border-slate-500' : 'border-r border-slate-200 dark:border-slate-700'} text-right font-medium">0.00</td>
                 `;
 
                 tr.innerHTML = `
-                    <td class="sticky-col bg-white dark:bg-darkCard p-1 border-r border-slate-200 dark:border-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80 transition-colors z-10">
+                    <td class="sticky-col bg-white dark:bg-darkCard p-1 border-r border-slate-300 dark:border-slate-600 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80 transition-colors z-10">
                         <input type="text" value="${row.name}" placeholder="Brand Name" oninput="updateData('${row.id}', 'name', null, this.value)" 
-                        class="w-full min-w-[160px] p-2 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none font-medium transition-all shadow-inner">
+                        class="w-full min-w-[120px] p-2 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none font-medium transition-all shadow-inner">
                     </td>
                     
-                    ${renderInput('mrp', 'q')}
-                    ${renderInput('mrp', 'p')}
-                    ${renderInput('mrp', 'n')}
+                    ${renderInput('mrp', 'q', false)}
+                    ${renderInput('mrp', 'p', false)}
+                    ${renderInput('mrp', 'n', true)}
                     
-                    ${renderInput('discount', 'q')}
-                    ${renderInput('discount', 'p')}
-                    ${renderInput('discount', 'n')}
+                    ${renderInput('discount', 'q', false)}
+                    ${renderInput('discount', 'p', false)}
+                    ${renderInput('discount', 'n', true)}
                     
-                    ${renderInput('cost', 'q')}
-                    ${renderInput('cost', 'p')}
-                    ${renderInput('cost', 'n')}
+                    ${renderInput('cost', 'q', false)}
+                    ${renderInput('cost', 'p', false)}
+                    ${renderInput('cost', 'n', true)}
                     
-                    ${renderInput('qty', 'q')}
-                    ${renderInput('qty', 'p')}
-                    ${renderInput('qty', 'n')}
+                    ${renderInput('qty', 'q', false)}
+                    ${renderInput('qty', 'p', false)}
+                    ${renderInput('qty', 'n', true)}
                     
-                    ${renderInput('dqty', 'q')}
-                    ${renderInput('dqty', 'p')}
-                    ${renderInput('dqty', 'n')}
+                    ${renderInput('dqty', 'q', false)}
+                    ${renderInput('dqty', 'p', false)}
+                    ${renderInput('dqty', 'n', true)}
                     
-                    ${renderOutput('tmp', 'q')}
-                    ${renderOutput('tmp', 'p')}
-                    ${renderOutput('tmp', 'n')}
+                    ${renderOutput('tmp', 'q', false)}
+                    ${renderOutput('tmp', 'p', false)}
+                    ${renderOutput('tmp', 'n', true)}
                     
-                    ${renderOutput('tdp', 'q')}
-                    ${renderOutput('tdp', 'p')}
-                    ${renderOutput('tdp', 'n')}
+                    ${renderOutput('tdp', 'q', false)}
+                    ${renderOutput('tdp', 'p', false)}
+                    ${renderOutput('tdp', 'n', true)}
                     
                     <td id="bp_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-amber-50/30 dark:bg-amber-900/10 text-base">0.00</td>
                     
