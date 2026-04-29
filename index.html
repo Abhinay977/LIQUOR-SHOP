@@ -25,12 +25,37 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Firebase SDKs (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth-compat.js"></script>
+
     <!-- Custom Styles -->
     <link rel="stylesheet" href="index.css">
 </head>
 <body class="bg-gray-50 text-slate-800 dark:bg-darkBg dark:text-slate-200 transition-colors duration-200 font-sans">
     
-    <div class="max-w-[1800px] mx-auto p-2 md:p-4 flex flex-col h-[100dvh]">
+    <!-- Login Screen -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300">
+        <div class="bg-white dark:bg-darkCard p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-darkBorder text-center">
+            <div class="w-20 h-20 mx-auto bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner">
+                <i class="fa-solid fa-wine-bottle"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-slate-800 dark:text-white mb-2">Liquor Shop</h2>
+            <p class="text-slate-500 dark:text-slate-400 mb-8">Profit & Inventory Management</p>
+            
+            <button onclick="signInWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-white border border-slate-300 dark:border-slate-600 rounded-xl py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm font-medium">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6" alt="Google Logo">
+                Sign in with Google
+            </button>
+            <p class="mt-4 text-xs text-slate-400 dark:text-slate-500">
+                You must update Firebase Configuration in <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">script.js</code>
+            </p>
+            <p class="mt-2 text-sm text-red-500" id="login-error-msg"></p>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="max-w-[1800px] mx-auto p-2 md:p-4 flex flex-col h-[100dvh] hidden">
         
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-4 md:mb-6 gap-3 md:gap-4">
@@ -55,6 +80,9 @@
                 </button>
                 <button onclick="resetData()" class="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white shadow transition-colors flex items-center gap-2 font-medium">
                     <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Reset All</span>
+                </button>
+                <button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 shadow transition-colors flex items-center gap-2 font-medium" title="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Logout</span>
                 </button>
             </div>
         </header>

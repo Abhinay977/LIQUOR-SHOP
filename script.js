@@ -1,7 +1,64 @@
+        // Firebase Configuration
+        // TODO: Replace with your actual Firebase project configuration from console.firebase.google.com
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        // Auth State Observer
+        auth.onAuthStateChanged((user) => {
+            const loginScreen = document.getElementById('login-screen');
+            const appContainer = document.getElementById('app-container');
+            
+            if (user) {
+                // User is signed in.
+                loginScreen.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                // Note: The app currently uses localStorage.
+                // In a future update, you could fetch user-specific data from Firestore here.
+            } else {
+                // No user is signed in.
+                loginScreen.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+            }
+        });
+
+        // Auth Functions
+        function signInWithGoogle() {
+            const errorMsg = document.getElementById('login-error-msg');
+            errorMsg.textContent = ''; // clear previous errors
+            
+            auth.signInWithPopup(provider).catch((error) => {
+                console.error("Auth Error:", error);
+                if (error.code === 'auth/invalid-api-key') {
+                    errorMsg.textContent = "Configuration Error: Please update your Firebase keys in script.js";
+                } else {
+                    errorMsg.textContent = "Sign-in failed. Check console for details.";
+                }
+            });
+        }
+
+        function logout() {
+            auth.signOut().catch((error) => {
+                console.error("Sign-out error:", error);
+            });
+        }
+
         // Data State
         let appData = JSON.parse(localStorage.getItem('liquorShopData')) || [];
         let historyData = JSON.parse(localStorage.getItem('liquorShopHistory')) || [];
-
         // Utilities
         function generateId() { return Math.random().toString(36).substr(2, 9); }
         function formatMoney(num) { return num.toFixed(2); }
