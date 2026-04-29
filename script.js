@@ -62,7 +62,8 @@
                             discount: { q: '', p: '', n: '' },
                             cost: { q: '', p: '', n: '' },
                             qty: { q: '', p: '', n: '' },
-                            dqty: { q: '', p: '', n: '' }
+                            dqty: { q: '', p: '', n: '' },
+                            extraDiscount: ''
                         });
                     }
                     saveData(true);
@@ -156,7 +157,8 @@
                 discount: { q: '', p: '', n: '' },
                 cost: { q: '', p: '', n: '' },
                 qty: { q: '', p: '', n: '' },
-                dqty: { q: '', p: '', n: '' }
+                dqty: { q: '', p: '', n: '' },
+                extraDiscount: ''
             });
             saveData(true);
             renderTable();
@@ -192,10 +194,11 @@
                     data: snapshot
                 });
                 
-                // Clear Quantities
+                // Clear Quantities and extra discounts
                 appData.forEach(row => {
                     row.qty = { q: '', p: '', n: '' };
                     row.dqty = { q: '', p: '', n: '' };
+                    row.extraDiscount = '';
                 });
                 saveData(true);
                 renderTable();
@@ -239,7 +242,8 @@
                 totalDiscProfit += (disc - cost) * dqty;
             });
             
-            let brandProfit = totalMrpProfit + totalDiscProfit;
+            const extraDisc = parseFloat(row.extraDiscount) || 0;
+            let brandProfit = totalMrpProfit + totalDiscProfit - extraDisc;
             
             const tmpEl = document.getElementById(`tmp_total_${row.id}`);
             if(tmpEl) {
@@ -278,6 +282,8 @@
                     const tdp = (disc - cost) * dqty;
                     grandTotalProfit += tmp + tdp;
                 });
+                const extraDisc = parseFloat(row.extraDiscount) || 0;
+                grandTotalProfit -= extraDisc;
             });
             
             document.getElementById('dash-brands').textContent = totalBrands;
@@ -360,6 +366,12 @@
                     
                     <td id="tmp_total_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-cyan-50/30 dark:bg-cyan-900/10 whitespace-nowrap">₹0.00</td>
                     <td id="tdp_total_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-emerald-50/30 dark:bg-emerald-900/10 whitespace-nowrap">₹0.00</td>
+                    
+                    <td class="p-1 border-r border-slate-200 dark:border-slate-700 bg-red-50/20 dark:bg-red-900/10">
+                        <input type="number" step="any" value="${row.extraDiscount || ''}" placeholder="0" oninput="updateData('${row.id}', 'extraDiscount', null, this.value)" 
+                        class="w-full min-w-[70px] text-right p-1.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-sm transition-all shadow-inner text-red-600 dark:text-red-400 font-medium placeholder:text-red-300 dark:placeholder:text-red-800">
+                    </td>
+                    
                     <td id="bp_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-amber-50/30 dark:bg-amber-900/10 text-base text-amber-700 dark:text-amber-500 whitespace-nowrap">₹0.00</td>
                     
                     <td class="p-2 text-center bg-white dark:bg-darkCard group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80 transition-colors">
@@ -441,6 +453,8 @@
                         totalBottles += q + dq;
                         grandTotalProfit += ((m - c) * q) + ((d - c) * dq);
                     });
+                    const extraDisc = parseFloat(row.extraDiscount) || 0;
+                    grandTotalProfit -= extraDisc;
                 });
                 
                 const profitClass = grandTotalProfit > 0 ? 'text-emerald-600 dark:text-emerald-400' : (grandTotalProfit < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-200');
@@ -460,6 +474,7 @@
                             <th colspan="3" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300">DISCOUNT QTY SOLD</th>
                             <th rowspan="2" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-800 dark:text-cyan-300">TOTAL MRP PROFIT</th>
                             <th rowspan="2" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300">TOTAL DISCOUNT PROFIT</th>
+                            <th rowspan="2" class="text-center p-2 border-r border-b border-slate-300 dark:border-slate-600 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 font-bold">EXTRA BARGAIN</th>
                             <th rowspan="2" class="text-center p-2 border-b border-slate-300 dark:border-slate-600 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300">Brand Profit</th>
                         </tr>
                         <tr>
@@ -492,10 +507,12 @@
                         totalMrp += (m - c) * q;
                         totalDisc += (d - c) * dq;
                     });
-                    bp = totalMrp + totalDisc;
+                    const extraDisc = parseFloat(row.extraDiscount) || 0;
+                    bp = totalMrp + totalDisc - extraDisc;
                     
                     const tdText = (val, isLast) => `<td class="p-1 ${isLast ? 'border-r-2 border-slate-400 dark:border-slate-500' : 'border-r border-slate-200 dark:border-slate-700'} text-right">${val || ''}</td>`;
                     const tdMoney = (val, colorClass) => `<td class="p-2 border-r border-slate-200 dark:border-slate-700 text-right font-bold ${getColorClass(val, colorClass)} whitespace-nowrap">₹${formatMoney(val)}</td>`;
+                    const tdRedMoney = (val) => `<td class="p-2 border-r border-slate-200 dark:border-slate-700 text-right font-bold text-red-600 dark:text-red-400 bg-red-50/20 dark:bg-red-900/10 whitespace-nowrap">₹${formatMoney(val)}</td>`;
                     
                     tableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td class="sticky-col bg-white dark:bg-darkCard p-1 md:p-2 border-r border-slate-200 dark:border-slate-700 font-bold z-10 text-[10px] md:text-xs truncate max-w-[60px] md:max-w-[120px]" title="${row.name || '-'}">${row.name || '-'}</td>
@@ -506,6 +523,7 @@
                         ${tdText(row.dqty ? row.dqty.q : '', false)}${tdText(row.dqty ? row.dqty.p : '', false)}${tdText(row.dqty ? row.dqty.n : '', true)}
                         ${tdMoney(totalMrp, 'bg-cyan-50/30 dark:bg-cyan-900/10')}
                         ${tdMoney(totalDisc, 'bg-emerald-50/30 dark:bg-emerald-900/10')}
+                        ${tdRedMoney(extraDisc)}
                         ${tdMoney(bp, 'font-bold bg-amber-50/50 dark:bg-amber-900/20')}
                     </tr>`;
                 });
