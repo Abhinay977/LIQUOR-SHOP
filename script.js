@@ -1,12 +1,12 @@
         // Firebase Configuration
         // TODO: Replace with your actual Firebase project configuration from console.firebase.google.com
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyAaCykQ_rT5mY6hvkQU7INX9BCs9ud5N9c",
+            authDomain: "liquor-shop-c21da.firebaseapp.com",
+            projectId: "liquor-shop-c21da",
+            storageBucket: "liquor-shop-c21da.firebasestorage.app",
+            messagingSenderId: "143928302985",
+            appId: "1:143928302985:web:7c1f125445a9d6cd9d5558"
         };
 
         // Initialize Firebase
