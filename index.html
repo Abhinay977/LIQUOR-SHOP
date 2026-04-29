@@ -87,9 +87,36 @@
                 <button onclick="resetData()" class="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white shadow transition-colors flex items-center gap-2 font-medium">
                     <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Reset All</span>
                 </button>
-                <button onclick="logout()" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 shadow transition-colors flex items-center gap-2 font-medium" title="Logout">
-                    <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Logout</span>
-                </button>
+                <!-- Profile Dropdown -->
+                <div class="relative">
+                    <button onclick="toggleProfileDropdown()" id="profile-btn" class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow flex-shrink-0">
+                        <img id="profile-img" src="https://ui-avatars.com/api/?name=User&background=random" alt="Profile" class="w-full h-full object-cover">
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="profile-dropdown" class="absolute right-0 mt-2 w-72 bg-white dark:bg-darkCard rounded-xl shadow-xl border border-slate-200 dark:border-darkBorder hidden z-50 overflow-hidden transform opacity-0 scale-95 transition-all duration-200 origin-top-right">
+                        <div class="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                            <div class="flex items-center gap-3">
+                                <img id="dropdown-profile-img" src="" alt="Profile" class="w-12 h-12 rounded-full border border-slate-200 dark:border-slate-600 object-cover bg-white">
+                                <div class="overflow-hidden">
+                                    <p id="profile-name" class="font-bold text-slate-800 dark:text-slate-200 truncate">User Name</p>
+                                    <p id="profile-email" class="text-xs text-slate-500 dark:text-slate-400 truncate">user@email.com</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-2">
+                            <div class="px-3 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Liquor Shop Calculator Options</div>
+                            <button id="sync-btn" onclick="forceSync()" class="w-full text-left px-3 py-2.5 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors font-medium">
+                                <i class="fa-solid fa-cloud-arrow-up text-indigo-500 w-4 text-center"></i> Sync Data to Cloud
+                            </button>
+                        </div>
+                        <div class="p-2 border-t border-slate-100 dark:border-slate-700">
+                            <button onclick="logout()" class="w-full text-left px-3 py-2.5 rounded-lg text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors font-medium">
+                                <i class="fa-solid fa-right-from-bracket w-4 text-center"></i> Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
 

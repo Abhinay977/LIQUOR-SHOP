@@ -37,6 +37,7 @@
                 currentUser = user;
                 loginScreen.classList.add('hidden');
                 appContainer.classList.remove('hidden');
+                if (typeof updateProfileUI === 'function') updateProfileUI(user);
                 loadDataFromFirestore();
             } else {
                 currentUser = null;
@@ -103,6 +104,58 @@
         }
 
         // Auth Functions
+        function updateProfileUI(user) {
+            const photoURL = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=random`;
+            const name = user.displayName || 'User';
+            const email = user.email || '';
+            
+            const profileImg = document.getElementById('profile-img');
+            const dropdownImg = document.getElementById('dropdown-profile-img');
+            if(profileImg) profileImg.src = photoURL;
+            if(dropdownImg) dropdownImg.src = photoURL;
+            
+            const profileName = document.getElementById('profile-name');
+            const profileEmail = document.getElementById('profile-email');
+            if(profileName) profileName.textContent = name;
+            if(profileEmail) profileEmail.textContent = email;
+        }
+
+        function toggleProfileDropdown() {
+            const dropdown = document.getElementById('profile-dropdown');
+            if (!dropdown) return;
+            if (dropdown.classList.contains('hidden')) {
+                dropdown.classList.remove('hidden');
+                void dropdown.offsetWidth; // trigger reflow
+                dropdown.classList.remove('opacity-0', 'scale-95');
+                dropdown.classList.add('opacity-100', 'scale-100');
+            } else {
+                dropdown.classList.remove('opacity-100', 'scale-100');
+                dropdown.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => dropdown.classList.add('hidden'), 200);
+            }
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('profile-dropdown');
+            const profileBtn = document.getElementById('profile-btn');
+            if (dropdown && !dropdown.classList.contains('hidden') && !dropdown.contains(e.target) && (!profileBtn || !profileBtn.contains(e.target))) {
+                dropdown.classList.remove('opacity-100', 'scale-100');
+                dropdown.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => dropdown.classList.add('hidden'), 200);
+            }
+        });
+
+        function forceSync() {
+            saveData(true);
+            const btn = document.getElementById('sync-btn');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check text-emerald-500 w-4 text-center"></i> Synced Successfully';
+                setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+            }
+        }
+
         function signInWithGoogle() {
             const errorMsg = document.getElementById('login-error-msg');
             errorMsg.textContent = ''; // clear previous errors
