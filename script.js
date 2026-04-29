@@ -150,9 +150,10 @@
             saveData(true);
             const btn = document.getElementById('sync-btn');
             if (btn) {
-                const originalText = btn.innerHTML;
                 btn.innerHTML = '<i class="fa-solid fa-check text-emerald-500 w-4 text-center"></i> Synced Successfully';
-                setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+                setTimeout(() => { 
+                    btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-indigo-500 w-4 text-center"></i> Sync Data to Cloud'; 
+                }, 2000);
             }
         }
 
@@ -186,21 +187,41 @@
             
             if (currentUser) {
                 clearTimeout(saveTimeout);
+                const btn = document.getElementById('sync-btn');
+                
                 const saveToCloud = async () => {
                     try {
+                        if (btn && !immediate) {
+                            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-indigo-500 w-4 text-center"></i> Syncing...';
+                        }
+                        
                         await db.collection('users').doc(currentUser.uid).set({
                             appData: appData,
                             historyData: historyData,
                             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                         }, { merge: true });
+                        
+                        if (btn && !immediate) {
+                            btn.innerHTML = '<i class="fa-solid fa-check text-emerald-500 w-4 text-center"></i> Auto-saved!';
+                            setTimeout(() => {
+                                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-indigo-500 w-4 text-center"></i> Sync Data to Cloud';
+                            }, 2000);
+                        }
                     } catch (error) {
                         console.error("Error saving to Firestore:", error);
+                        if (btn && !immediate) {
+                            btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500 w-4 text-center"></i> Sync Error';
+                            setTimeout(() => {
+                                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-indigo-500 w-4 text-center"></i> Sync Data to Cloud';
+                            }, 2000);
+                        }
                     }
                 };
 
                 if (immediate) {
                     await saveToCloud();
                 } else {
+                    if (btn) btn.innerHTML = '<i class="fa-solid fa-clock text-amber-500 w-4 text-center"></i> Waiting to sync...';
                     saveTimeout = setTimeout(saveToCloud, 2000);
                 }
             }
