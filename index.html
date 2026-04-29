@@ -53,7 +53,7 @@
     </div>
 
     <!-- Main App Container -->
-    <div id="app-container" class="max-w-[1800px] mx-auto p-2 md:p-4 flex flex-col h-[100dvh] hidden">
+    <div id="app-container" class="max-w-[1800px] mx-auto p-2 md:p-4 flex flex-col min-h-screen hidden">
         
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-4 md:mb-6 gap-3 md:gap-4">
@@ -85,7 +85,7 @@
             </div>
         </header>
 
-        <div id="main-app-content" class="flex flex-col flex-grow min-h-0">
+        <div id="main-app-content" class="flex flex-col flex-grow">
             <!-- Dashboard -->
             <div class="flex flex-row overflow-x-auto snap-x md:grid md:grid-cols-3 gap-4 mb-4 pb-2 hide-scrollbar">
                 <div class="min-w-[220px] shrink-0 snap-start bg-white dark:bg-darkCard p-4 rounded-xl shadow-sm border border-slate-200 dark:border-darkBorder flex items-center gap-4">
@@ -129,7 +129,7 @@
         </div>
 
         <!-- Table Container -->
-        <div class="table-wrapper bg-white dark:bg-darkCard rounded-xl shadow border border-slate-200 dark:border-darkBorder flex-grow min-h-0 relative">
+        <div class="table-wrapper bg-white dark:bg-darkCard rounded-xl shadow border border-slate-200 dark:border-darkBorder relative overflow-x-auto">
             <table class="min-w-max w-full text-sm text-left border-collapse">
                 <thead class="text-xs uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b-2 border-slate-300 dark:border-slate-600">
                     <!-- Top Header Row -->
@@ -159,7 +159,7 @@
         </div>
 
         <!-- History Content -->
-        <div id="history-content" class="hidden flex-col flex-grow min-h-0">
+        <div id="history-content" class="hidden flex-col flex-grow">
             <!-- History Toolbar -->
             <div class="flex justify-between items-center mb-6 bg-white dark:bg-darkCard p-4 rounded-xl shadow border border-slate-200 dark:border-darkBorder">
                 <div class="flex items-center gap-4">
@@ -171,7 +171,7 @@
             </div>
 
             <!-- History Feed Placeholder -->
-            <div id="history-feed" class="flex flex-col flex-grow min-h-0 gap-6 overflow-y-auto pb-10">
+            <div id="history-feed" class="flex flex-col flex-grow gap-6 pb-10">
                 <!-- Injected via JS -->
             </div>
             
