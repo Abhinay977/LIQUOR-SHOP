@@ -27,6 +27,11 @@
         auth.onAuthStateChanged((user) => {
             const loginScreen = document.getElementById('login-screen');
             const appContainer = document.getElementById('app-container');
+            const loadingScreen = document.getElementById('loading-screen');
+            
+            if (loadingScreen) {
+                loadingScreen.classList.add('hidden');
+            }
             
             if (user) {
                 currentUser = user;
