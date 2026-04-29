@@ -366,7 +366,7 @@
             ];
 
             groups.forEach(g => {
-                ['Full', 'Half', 'Quarter'].forEach((size, index) => {
+                ['Q', 'P', 'N'].forEach((size, index) => {
                     const borderClass = index === 2 ? 'border-r-2 border-slate-400 dark:border-slate-500' : 'border-r border-slate-300 dark:border-slate-600';
                     html += `<th class="p-2 border-b border-slate-300 dark:border-slate-600 w-20 text-center ${borderClass} ${g.bg}">${size}</th>`;
                 });
@@ -551,7 +551,7 @@
                     { bg: 'bg-indigo-50/50 dark:bg-indigo-900/10' }
                 ];
                 groups.forEach(g => {
-                    ['Full', 'Half', 'Quarter'].forEach((size, idx) => {
+                    ['Q', 'P', 'N'].forEach((size, idx) => {
                         const bClass = idx === 2 ? 'border-r-2 border-slate-400 dark:border-slate-500' : 'border-r border-slate-300 dark:border-slate-600';
                         tableHtml += `<th class="p-1 border-b border-slate-300 dark:border-slate-600 w-16 text-center ${bClass} ${g.bg}">${size}</th>`; 
                     });
