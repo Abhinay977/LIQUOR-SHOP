@@ -221,6 +221,63 @@
             updateDashboard();
         }
 
+        // Bargain Calculator Logic
+        let currentBargainRowId = null;
+
+        function openBargainModal(rowId) {
+            currentBargainRowId = rowId;
+            const row = appData.find(r => r.id === rowId);
+            if (!row) return;
+            
+            document.getElementById('bargain-brand-name').textContent = "Brand: " + (row.name || 'Unnamed Brand');
+            document.getElementById('bargain-qty').value = '';
+            document.getElementById('bargain-price').value = '';
+            
+            const modal = document.getElementById('bargain-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeBargainModal() {
+            const modal = document.getElementById('bargain-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            currentBargainRowId = null;
+        }
+
+        function calculateAndAddBargain() {
+            if (!currentBargainRowId) return;
+            
+            const row = appData.find(r => r.id === currentBargainRowId);
+            if (!row) return;
+            
+            const size = document.getElementById('bargain-size').value;
+            const qty = parseFloat(document.getElementById('bargain-qty').value) || 0;
+            const soldPrice = parseFloat(document.getElementById('bargain-price').value) || 0;
+            
+            if (qty <= 0) {
+                alert("Please enter a valid quantity.");
+                return;
+            }
+            
+            const standardPrice = parseFloat(row.discount[size]) || 0;
+            if (standardPrice <= 0) {
+                alert("Please enter a standard 'Discount Price' for this size first.");
+                return;
+            }
+            
+            const lossPerBottle = standardPrice - soldPrice;
+            const totalLoss = lossPerBottle * qty;
+            
+            const currentExtra = parseFloat(row.extraDiscount) || 0;
+            const newExtra = parseFloat((currentExtra + totalLoss).toFixed(2));
+            
+            // This triggers saveData and recalculation
+            updateData(currentBargainRowId, 'extraDiscount', null, newExtra);
+            closeBargainModal();
+            renderTable(); // Force re-render to update the input value
+        }
+
         function getColorClass(val, baseClasses) {
             if (val > 0) return `${baseClasses} text-emerald-600 dark:text-emerald-400`;
             if (val < 0) return `${baseClasses} text-red-600 dark:text-red-400`;
@@ -368,8 +425,14 @@
                     <td id="tdp_total_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-emerald-50/30 dark:bg-emerald-900/10 whitespace-nowrap">₹0.00</td>
                     
                     <td class="p-1 border-r border-slate-200 dark:border-slate-700 bg-red-50/20 dark:bg-red-900/10">
-                        <input type="number" step="any" value="${row.extraDiscount || ''}" placeholder="0" oninput="updateData('${row.id}', 'extraDiscount', null, this.value)" 
-                        class="w-full min-w-[70px] text-right p-1.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-sm transition-all shadow-inner text-red-600 dark:text-red-400 font-medium placeholder:text-red-300 dark:placeholder:text-red-800">
+                        <div class="relative w-full flex items-center">
+                            <input type="number" step="any" value="${row.extraDiscount || ''}" placeholder="0" oninput="updateData('${row.id}', 'extraDiscount', null, this.value)" 
+                            class="w-full min-w-[75px] text-right p-1.5 pr-7 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-sm transition-all shadow-inner text-red-600 dark:text-red-400 font-medium placeholder:text-red-300 dark:placeholder:text-red-800">
+                            
+                            <button onclick="openBargainModal('${row.id}')" title="Bargain Calculator" class="absolute right-1 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors z-10">
+                                <i class="fa-solid fa-calculator text-[11px]"></i>
+                            </button>
+                        </div>
                     </td>
                     
                     <td id="bp_${row.id}" class="p-3 border-r border-slate-200 dark:border-slate-700 text-right font-bold bg-amber-50/30 dark:bg-amber-900/10 text-base text-amber-700 dark:text-amber-500 whitespace-nowrap">₹0.00</td>

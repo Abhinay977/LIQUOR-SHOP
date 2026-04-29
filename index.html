@@ -183,6 +183,47 @@
         
     </div>
 
+    <!-- Bargain Calculator Modal -->
+    <div id="bargain-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 items-center justify-center p-4 transition-all duration-300 hidden">
+        <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-darkBorder">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-calculator text-indigo-500"></i> Bargain Calculator
+                </h3>
+                <button onclick="closeBargainModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <p id="bargain-brand-name" class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-5 truncate pb-3 border-b border-slate-100 dark:border-slate-700"></p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Bottle Size</label>
+                    <select id="bargain-size" class="w-full p-2.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm text-slate-800 dark:text-slate-200">
+                        <option value="q">Quart (Q)</option>
+                        <option value="p">Pint (P)</option>
+                        <option value="n">Nip (N)</option>
+                    </select>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Qty Sold</label>
+                        <input type="number" id="bargain-qty" min="1" step="any" class="w-full p-2.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm text-slate-800 dark:text-slate-200" placeholder="e.g. 2">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Actual Price (₹)</label>
+                        <input type="number" id="bargain-price" min="0" step="any" class="w-full p-2.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm text-slate-800 dark:text-slate-200" placeholder="e.g. 130">
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="calculateAndAddBargain()" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-plus"></i> Calculate & Add Loss
+            </button>
+        </div>
+    </div>
+
     <!-- Application Logic -->
     <script src="script.js"></script>
 </body>
