@@ -73,7 +73,26 @@
                 }
             } catch (error) {
                 console.error("Error loading data from Firestore:", error);
-                alert("Failed to sync data from cloud. Please check your internet connection.");
+                alert("Cloud Sync Error: " + error.message + "\n\nFalling back to local offline data.");
+                
+                // Fallback to local data so the app still works
+                appData = JSON.parse(localStorage.getItem('liquorShopData')) || [];
+                historyData = JSON.parse(localStorage.getItem('liquorShopHistory')) || [];
+                if (appData.length === 0) {
+                    appData.push({
+                        id: generateId(),
+                        name: '',
+                        mrp: { q: '', p: '', n: '' },
+                        discount: { q: '', p: '', n: '' },
+                        cost: { q: '', p: '', n: '' },
+                        qty: { q: '', p: '', n: '' },
+                        dqty: { q: '', p: '', n: '' }
+                    });
+                }
+                renderTable();
+                if (!document.getElementById('history-content').classList.contains('hidden')) {
+                    renderHistoryFeed();
+                }
             }
         }
 
