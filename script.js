@@ -16,6 +16,12 @@
         
         const auth = firebase.auth();
         const provider = new firebase.auth.GoogleAuthProvider();
+        const db = firebase.firestore();
+
+        let appData = [];
+        let historyData = [];
+        let currentUser = null;
+        let saveTimeout = null;
 
         // Auth State Observer
         auth.onAuthStateChanged((user) => {
@@ -23,17 +29,53 @@
             const appContainer = document.getElementById('app-container');
             
             if (user) {
-                // User is signed in.
+                currentUser = user;
                 loginScreen.classList.add('hidden');
                 appContainer.classList.remove('hidden');
-                // Note: The app currently uses localStorage.
-                // In a future update, you could fetch user-specific data from Firestore here.
+                loadDataFromFirestore();
             } else {
-                // No user is signed in.
+                currentUser = null;
                 loginScreen.classList.remove('hidden');
                 appContainer.classList.add('hidden');
             }
         });
+
+        async function loadDataFromFirestore() {
+            if (!currentUser) return;
+            try {
+                const doc = await db.collection('users').doc(currentUser.uid).get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    appData = data.appData || [];
+                    historyData = data.historyData || [];
+                    localStorage.setItem('liquorShopData', JSON.stringify(appData));
+                    localStorage.setItem('liquorShopHistory', JSON.stringify(historyData));
+                } else {
+                    // First time on cloud, migrate local data if exists
+                    appData = JSON.parse(localStorage.getItem('liquorShopData')) || [];
+                    historyData = JSON.parse(localStorage.getItem('liquorShopHistory')) || [];
+                    if (appData.length === 0) {
+                        appData.push({
+                            id: generateId(),
+                            name: '',
+                            mrp: { q: '', p: '', n: '' },
+                            discount: { q: '', p: '', n: '' },
+                            cost: { q: '', p: '', n: '' },
+                            qty: { q: '', p: '', n: '' },
+                            dqty: { q: '', p: '', n: '' }
+                        });
+                    }
+                    saveData(true);
+                }
+                renderTable();
+                if (!document.getElementById('history-content').classList.contains('hidden')) {
+                    renderHistoryFeed();
+                }
+            } catch (error) {
+                console.error("Error loading data from Firestore:", error);
+                alert("Failed to sync data from cloud. Please check your internet connection.");
+            }
+        }
 
         // Auth Functions
         function signInWithGoogle() {
@@ -56,13 +98,35 @@
             });
         }
 
-        // Data State
-        let appData = JSON.parse(localStorage.getItem('liquorShopData')) || [];
-        let historyData = JSON.parse(localStorage.getItem('liquorShopHistory')) || [];
         // Utilities
         function generateId() { return Math.random().toString(36).substr(2, 9); }
         function formatMoney(num) { return num.toFixed(2); }
-        function saveToLocal() { localStorage.setItem('liquorShopData', JSON.stringify(appData)); }
+        
+        async function saveData(immediate = false) {
+            localStorage.setItem('liquorShopData', JSON.stringify(appData));
+            localStorage.setItem('liquorShopHistory', JSON.stringify(historyData));
+            
+            if (currentUser) {
+                clearTimeout(saveTimeout);
+                const saveToCloud = async () => {
+                    try {
+                        await db.collection('users').doc(currentUser.uid).set({
+                            appData: appData,
+                            historyData: historyData,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                    } catch (error) {
+                        console.error("Error saving to Firestore:", error);
+                    }
+                };
+
+                if (immediate) {
+                    await saveToCloud();
+                } else {
+                    saveTimeout = setTimeout(saveToCloud, 2000);
+                }
+            }
+        }
 
         // Core Functions
         function addRow() {
@@ -75,14 +139,14 @@
                 qty: { q: '', p: '', n: '' },
                 dqty: { q: '', p: '', n: '' }
             });
-            saveToLocal();
+            saveData(true);
             renderTable();
         }
 
         function deleteRow(id) {
             if(confirm('Are you sure you want to delete this brand row?')) {
                 appData = appData.filter(r => r.id !== id);
-                saveToLocal();
+                saveData(true);
                 renderTable();
             }
         }
@@ -90,7 +154,7 @@
         function resetData() {
             if(confirm('WARNING: This will delete all your data! Are you sure?')) {
                 appData = [];
-                saveToLocal();
+                saveData(true);
                 renderTable();
             }
         }
@@ -108,14 +172,13 @@
                     timestamp: Date.now(),
                     data: snapshot
                 });
-                localStorage.setItem('liquorShopHistory', JSON.stringify(historyData));
                 
                 // Clear Quantities
                 appData.forEach(row => {
                     row.qty = { q: '', p: '', n: '' };
                     row.dqty = { q: '', p: '', n: '' };
                 });
-                saveToLocal();
+                saveData(true);
                 renderTable();
                 alert('Saved to History! Quantities have been reset.');
             }
@@ -131,7 +194,7 @@
                 row[field] = value;
             }
             
-            saveToLocal();
+            saveData();
             updateRowCalculations(row);
             updateDashboard();
         }
@@ -478,9 +541,6 @@
             }
             initHeaders();
             
-            if(appData.length === 0) {
-                addRow();
-            } else {
-                renderTable();
-            }
+            // Note: Table rendering and initial data logic is handled by 
+            // loadDataFromFirestore() which is called during auth state change
         };
