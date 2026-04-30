@@ -659,21 +659,30 @@
 
                 let actionCells = [];
                 try {
+                    // Get full dimensions of the table before we modify anything
+                    const scrollWidth = targetElement.scrollWidth;
+                    const scrollHeight = targetElement.scrollHeight;
+
                     // Temporarily modify styles to capture full scrolling area without cropping
                     const isDark = document.documentElement.classList.contains('dark');
                     originalStyles = {
                         backgroundColor: targetElement.style.backgroundColor,
                         overflow: targetElement.style.overflow,
                         width: targetElement.style.width,
+                        minWidth: targetElement.style.minWidth,
                         maxWidth: targetElement.style.maxWidth,
-                        maxHeight: targetElement.style.maxHeight
+                        maxHeight: targetElement.style.maxHeight,
+                        flexShrink: targetElement.style.flexShrink
                     };
 
+                    // Force the element to expand to its full scrollable width
                     targetElement.style.backgroundColor = isDark ? '#1e293b' : '#ffffff';
                     targetElement.style.overflow = 'visible';
-                    targetElement.style.width = 'max-content';
+                    targetElement.style.width = scrollWidth + 'px';
+                    targetElement.style.minWidth = scrollWidth + 'px';
                     targetElement.style.maxWidth = 'none';
                     targetElement.style.maxHeight = 'none';
+                    targetElement.style.flexShrink = '0';
 
                     // Only hide the actions column for the main table (History tables don't have one)
                     if (!recordId) {
@@ -681,11 +690,18 @@
                         actionCells.forEach(cell => cell.style.display = 'none');
                     }
 
+                    // A brief timeout to let the browser apply the styles and recalculate layout
+                    await new Promise(r => setTimeout(r, 50));
+
                     canvas = await html2canvas(targetElement, { 
                         scale: 2, 
                         useCORS: true,
-                        windowWidth: targetElement.scrollWidth,
-                        windowHeight: targetElement.scrollHeight
+                        width: scrollWidth,
+                        height: scrollHeight,
+                        windowWidth: scrollWidth + 200,
+                        windowHeight: Math.max(scrollHeight + 200, window.innerHeight),
+                        scrollX: 0,
+                        scrollY: 0
                     });
 
                     // Restore actions column
@@ -703,8 +719,10 @@
                     targetElement.style.backgroundColor = originalStyles.backgroundColor;
                     targetElement.style.overflow = originalStyles.overflow;
                     targetElement.style.width = originalStyles.width;
+                    targetElement.style.minWidth = originalStyles.minWidth;
                     targetElement.style.maxWidth = originalStyles.maxWidth;
                     targetElement.style.maxHeight = originalStyles.maxHeight;
+                    targetElement.style.flexShrink = originalStyles.flexShrink;
                     if (wasHidden) targetElement.classList.add('hidden');
                 }
 
