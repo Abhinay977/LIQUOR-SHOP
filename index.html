@@ -244,11 +244,11 @@
                 <div class="flex gap-4">
                     <div class="flex-1">
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Qty Sold</label>
-                        <input type="number" id="bargain-qty" min="1" step="any" class="w-full p-2.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm text-slate-800 dark:text-slate-200" placeholder="e.g. 2">
+                        <input type="number" id="bargain-qty" min="1" step="any" onkeydown="if(event.key==='-')event.preventDefault()" oninput="if(this.value<0)this.value=Math.abs(this.value)" class="w-full p-2.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm text-slate-800 dark:text-slate-200" placeholder="e.g. 2">
                     </div>
                     <div class="flex-1">
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Actual Price (₹)</label>
-                        <input type="number" id="bargain-price" min="0" step="any" class="w-full p-2.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm text-slate-800 dark:text-slate-200" placeholder="e.g. 130">
+                        <input type="number" id="bargain-price" min="0" step="any" onkeydown="if(event.key==='-')event.preventDefault()" oninput="if(this.value<0)this.value=Math.abs(this.value)" class="w-full p-2.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all shadow-sm text-slate-800 dark:text-slate-200" placeholder="e.g. 130">
                     </div>
                 </div>
             </div>

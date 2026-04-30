@@ -289,6 +289,12 @@
             const row = appData.find(r => r.id === id);
             if (!row) return;
             
+            // Prevent negative inputs mathematically
+            if (field !== 'name' && value !== '') {
+                const num = parseFloat(value);
+                if (num < 0) value = Math.abs(num).toString();
+            }
+            
             if (size) {
                 row[field][size] = value;
             } else {
@@ -465,7 +471,7 @@
                 
                 const renderInput = (field, size, isLast) => `
                     <td class="p-1 ${isLast ? 'border-r-2 border-slate-400 dark:border-slate-500' : 'border-r border-slate-200 dark:border-slate-700'}">
-                        <input type="number" step="any" value="${row[field][size]}" oninput="updateData('${row.id}', '${field}', '${size}', this.value)" 
+                        <input type="number" min="0" step="any" value="${row[field][size]}" onkeydown="if(event.key==='-')event.preventDefault()" oninput="if(this.value<0)this.value=Math.abs(this.value); updateData('${row.id}', '${field}', '${size}', this.value)" 
                         class="w-full min-w-[65px] text-right p-1.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition-all shadow-inner">
                     </td>
                 `;
@@ -505,7 +511,7 @@
                     
                     <td class="p-1 border-r border-slate-200 dark:border-slate-700 bg-red-50/20 dark:bg-red-900/10">
                         <div class="relative w-full flex items-center">
-                            <input type="number" step="any" value="${row.extraDiscount || ''}" placeholder="0" oninput="updateData('${row.id}', 'extraDiscount', null, this.value)" 
+                            <input type="number" min="0" step="any" value="${row.extraDiscount || ''}" placeholder="0" onkeydown="if(event.key==='-')event.preventDefault()" oninput="if(this.value<0)this.value=Math.abs(this.value); updateData('${row.id}', 'extraDiscount', null, this.value)" 
                             class="w-full min-w-[75px] text-right p-1.5 pr-7 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-sm transition-all shadow-inner text-red-600 dark:text-red-400 font-medium placeholder:text-red-300 dark:placeholder:text-red-800">
                             
                             <button onclick="openBargainModal('${row.id}')" title="Bargain Calculator" class="absolute right-1 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors z-10">
