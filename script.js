@@ -628,59 +628,102 @@
             const dateStr = recordId ? historyData.find(r => r.id === recordId)?.date : new Date().toLocaleDateString();
             const fileName = `Liquor_Shop_Export_${dateStr.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-            // Image and PDF formats use the DOM
-            if (['pdf', 'png', 'jpeg'].includes(format)) {
-                let targetElement;
-                let wasHidden = false;
-                
-                if (recordId) {
-                    targetElement = document.getElementById(`table_${recordId}`);
-                    if (targetElement && targetElement.classList.contains('hidden')) {
-                        targetElement.classList.remove('hidden');
-                        wasHidden = true;
-                    }
-                } else {
-                    targetElement = document.querySelector('.table-wrapper');
-                }
+            // Capture Screenshot Image (Uncropped)
+            let canvas;
+            let targetElement;
+            let originalStyles = {};
+            
+            if (recordId) {
+                targetElement = document.getElementById(`table_${recordId}`);
+            } else {
+                targetElement = document.querySelector('.table-wrapper');
+            }
 
-                if (!targetElement) {
-                    alert("Could not find the table to export.");
-                    return;
-                }
-
-                try {
-                    // Temporarily add a white/dark background to ensure readability in image
-                    const originalBg = targetElement.style.backgroundColor;
-                    const isDark = document.documentElement.classList.contains('dark');
-                    targetElement.style.backgroundColor = isDark ? '#1e293b' : '#ffffff';
-
-                    const canvas = await html2canvas(targetElement, { scale: 2, useCORS: true });
-                    targetElement.style.backgroundColor = originalBg;
-
-                    if (format === 'pdf') {
-                        const { jsPDF } = window.jspdf;
-                        const doc = new jsPDF('l', 'mm', 'a4');
-                        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                        const pdfWidth = doc.internal.pageSize.getWidth();
-                        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                        
-                        doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                        doc.save(`${fileName}.pdf`);
-                    } else if (format === 'png' || format === 'jpeg') {
-                        const link = document.createElement('a');
-                        link.download = `${fileName}.${format}`;
-                        link.href = canvas.toDataURL(`image/${format}`, 1.0);
-                        link.click();
-                    }
-                } catch (err) {
-                    console.error("Export Error: ", err);
-                    alert("An error occurred during image/PDF export.");
-                } finally {
-                    if (wasHidden && targetElement) {
-                        targetElement.classList.add('hidden');
-                    }
-                }
+            if (!targetElement) {
+                alert("Could not find the table to export.");
                 return;
+            }
+
+            try {
+                // Temporarily modify styles to capture full scrolling area without cropping
+                const isDark = document.documentElement.classList.contains('dark');
+                originalStyles = {
+                    backgroundColor: targetElement.style.backgroundColor,
+                    overflow: targetElement.style.overflow,
+                    width: targetElement.style.width,
+                    maxWidth: targetElement.style.maxWidth,
+                    maxHeight: targetElement.style.maxHeight
+                };
+
+                targetElement.style.backgroundColor = isDark ? '#1e293b' : '#ffffff';
+                targetElement.style.overflow = 'visible';
+                targetElement.style.width = 'max-content';
+                targetElement.style.maxWidth = 'none';
+                targetElement.style.maxHeight = 'none';
+
+                // Optional: hide the actions column for cleaner export
+                const actionCells = targetElement.querySelectorAll('th:last-child, td:last-child');
+                actionCells.forEach(cell => cell.style.display = 'none');
+
+                canvas = await html2canvas(targetElement, { 
+                    scale: 2, 
+                    useCORS: true,
+                    windowWidth: targetElement.scrollWidth,
+                    windowHeight: targetElement.scrollHeight
+                });
+
+                // Restore actions column
+                actionCells.forEach(cell => cell.style.display = '');
+
+            } catch (err) {
+                console.error("Screenshot Error: ", err);
+                alert("An error occurred while generating the screenshot.");
+                return;
+            } finally {
+                // Restore original styles
+                targetElement.style.backgroundColor = originalStyles.backgroundColor;
+                targetElement.style.overflow = originalStyles.overflow;
+                targetElement.style.width = originalStyles.width;
+                targetElement.style.maxWidth = originalStyles.maxWidth;
+                targetElement.style.maxHeight = originalStyles.maxHeight;
+            }
+
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+            // Export based on selected format
+            if (format === 'pdf') {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4');
+                const pdfWidth = doc.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                doc.save(`${fileName}.pdf`);
+            } else if (format === 'png' || format === 'jpeg') {
+                const link = document.createElement('a');
+                link.download = `${fileName}.${format}`;
+                link.href = canvas.toDataURL(`image/${format}`, 1.0);
+                link.click();
+            } else if (format === 'word') {
+                // Embed the screenshot in Word
+                const htmlStr = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head><meta charset='utf-8'><title>Export</title></head>
+                    <body>
+                        <h2 style="font-family: Arial, sans-serif; text-align: center;">Liquor Shop Data Export - ${dateStr}</h2>
+                        <img src="${imgData}" style="max-width: 100%; height: auto;" />
+                    </body>
+                    </html>
+                `;
+                const blob = new Blob(['\ufeff', htmlStr], { type: 'application/msword' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${fileName}.doc`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
             }
 
             // Excel, CSV, Word formats build data from JSON
@@ -723,59 +766,52 @@
                     "Brand Profit": bp.toFixed(2)
                 });
             });
-
             if (format === 'excel' || format === 'csv') {
-                const worksheet = XLSX.utils.json_to_sheet(rows);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
-                
+                // Excel and CSV cannot reliably embed base64 images in a way that works seamlessly across all versions.
+                // However, we export the exact HTML table to retain the visual layout for Excel.
                 if (format === 'excel') {
-                    XLSX.writeFile(workbook, `${fileName}.xlsx`);
+                    // Get the table HTML and wrap it for Excel
+                    const tableClone = targetElement.cloneNode(true);
+                    
+                    // Remove actions column from clone
+                    const actionCells = tableClone.querySelectorAll('th:last-child, td:last-child');
+                    actionCells.forEach(cell => cell.remove());
+                    
+                    // Convert inputs to text for static export
+                    tableClone.querySelectorAll('input').forEach(input => {
+                        const span = document.createElement('span');
+                        span.textContent = input.value;
+                        input.parentNode.replaceChild(span, input);
+                    });
+                    
+                    const htmlStr = `
+                        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:x='urn:schemas-microsoft-com:office:excel' xmlns='http://www.w3.org/TR/REC-html40'>
+                        <head><meta charset='utf-8'><style>
+                            table { border-collapse: collapse; width: 100%; font-family: Arial; }
+                            th, td { border: 1px solid #ddd; padding: 5px; text-align: center; }
+                        </style></head>
+                        <body>
+                            <h2>Liquor Shop Data Export - ${dateStr}</h2>
+                            ${tableClone.outerHTML}
+                        </body>
+                        </html>
+                    `;
+                    const blob = new Blob(['\ufeff', htmlStr], { type: 'application/vnd.ms-excel' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${fileName}.xls`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
                 } else {
+                    // For CSV, we still need to provide data since CSV cannot hold HTML or images
+                    const worksheet = XLSX.utils.json_to_sheet(rows);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
                     XLSX.writeFile(workbook, `${fileName}.csv`);
                 }
-            } else if (format === 'word') {
-                let htmlStr = `
-                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                    <head><meta charset='utf-8'><title>Export</title>
-                    <style>
-                        table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 10pt; }
-                        th, td { border: 1px solid #999; padding: 4px; text-align: right; }
-                        th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
-                        td:first-child, th:first-child { text-align: left; }
-                        h2 { font-family: Arial, sans-serif; text-align: center; }
-                    </style>
-                    </head><body>
-                    <h2>Liquor Shop Data Export - ${dateStr}</h2>
-                    <table><thead><tr>
-                `;
-                
-                if (rows.length > 0) {
-                    Object.keys(rows[0]).forEach(key => {
-                        htmlStr += `<th>${key}</th>`;
-                    });
-                    htmlStr += `</tr></thead><tbody>`;
-                    
-                    rows.forEach(row => {
-                        htmlStr += `<tr>`;
-                        Object.values(row).forEach(val => {
-                            htmlStr += `<td>${val}</td>`;
-                        });
-                        htmlStr += `</tr>`;
-                    });
-                }
-                
-                htmlStr += `</tbody></table></body></html>`;
-                
-                const blob = new Blob(['\ufeff', htmlStr], { type: 'application/msword' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `${fileName}.doc`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
             }
         }
 
