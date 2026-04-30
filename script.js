@@ -69,7 +69,8 @@
                             cost: { q: '', p: '', n: '' },
                             qty: { q: '', p: '', n: '' },
                             dqty: { q: '', p: '', n: '' },
-                            extraDiscount: ''
+                            extraDiscount: '',
+                            category: 'Other'
                         });
                     }
                     saveData(true);
@@ -93,7 +94,8 @@
                         discount: { q: '', p: '', n: '' },
                         cost: { q: '', p: '', n: '' },
                         qty: { q: '', p: '', n: '' },
-                        dqty: { q: '', p: '', n: '' }
+                        dqty: { q: '', p: '', n: '' },
+                        category: 'Other'
                     });
                 }
                 renderTable();
@@ -237,7 +239,8 @@
                 cost: { q: '', p: '', n: '' },
                 qty: { q: '', p: '', n: '' },
                 dqty: { q: '', p: '', n: '' },
-                extraDiscount: ''
+                extraDiscount: '',
+                category: 'Other'
             });
             saveData(true);
             renderTable();
@@ -405,7 +408,12 @@
             let totalBottles = 0;
             let grandTotalProfit = 0;
             
+            let categoryProfits = {
+                'Whisky': 0, 'Vodka': 0, 'Beer': 0, 'Rum': 0, 'Wine': 0, 'Gin': 0, 'Brandy': 0, 'Other': 0
+            };
+            
             appData.forEach(row => {
+                let rowProfit = 0;
                 ['q', 'p', 'n'].forEach(size => {
                     const mrp = parseFloat(row.mrp[size]) || 0;
                     const disc = parseFloat(row.discount[size]) || 0;
@@ -416,10 +424,18 @@
                     totalBottles += qty + dqty;
                     const tmp = (mrp - cost) * qty;
                     const tdp = (disc - cost) * dqty;
-                    grandTotalProfit += tmp + tdp;
+                    rowProfit += tmp + tdp;
                 });
                 const extraDisc = parseFloat(row.extraDiscount) || 0;
-                grandTotalProfit -= extraDisc;
+                rowProfit -= extraDisc;
+                grandTotalProfit += rowProfit;
+                
+                const cat = row.category || 'Other';
+                if (categoryProfits[cat] !== undefined) {
+                    categoryProfits[cat] += rowProfit;
+                } else {
+                    categoryProfits['Other'] += rowProfit;
+                }
             });
             
             document.getElementById('dash-brands').textContent = totalBrands;
@@ -428,6 +444,21 @@
             const dashProfit = document.getElementById('dash-profit');
             dashProfit.textContent = '₹' + formatMoney(grandTotalProfit);
             dashProfit.className = `text-2xl font-bold ${grandTotalProfit > 0 ? 'text-emerald-600 dark:text-emerald-400' : (grandTotalProfit < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-200')}`;
+            
+            const catContainer = document.getElementById('category-profits');
+            if (catContainer) {
+                let catHtml = '';
+                Object.entries(categoryProfits).forEach(([cat, profit]) => {
+                    if (profit !== 0 || cat === 'Whisky') {
+                        const color = profit > 0 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' : (profit < 0 ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'text-slate-600 dark:text-slate-400 bg-white dark:bg-darkCard border-slate-200 dark:border-slate-700');
+                        catHtml += `<div class="shrink-0 px-3 py-1.5 rounded-full border ${color} text-xs font-medium flex items-center gap-2 shadow-sm">
+                            <span>${cat}</span>
+                            <span class="font-bold">₹${formatMoney(profit)}</span>
+                        </div>`;
+                    }
+                });
+                catContainer.innerHTML = catHtml;
+            }
         }
 
         // Rendering logic
@@ -475,9 +506,21 @@
                 `;
 
                 tr.innerHTML = `
-                    <td class="sticky-col bg-white dark:bg-darkCard p-0.5 md:p-1 border-r border-slate-300 dark:border-slate-600 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80 transition-colors z-10">
-                        <input type="text" value="${row.name}" placeholder="Brand" oninput="updateData('${row.id}', 'name', null, this.value)" 
-                        class="w-[60px] md:w-full md:min-w-[120px] p-1 md:p-2 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none font-medium transition-all shadow-inner text-xs md:text-sm">
+                    <td class="sticky-col bg-white dark:bg-darkCard p-1 md:p-2 border-r border-slate-300 dark:border-slate-600 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80 transition-colors z-10 align-top min-w-[100px] md:min-w-[140px]">
+                        <div class="flex flex-col gap-1.5 h-full justify-center">
+                            <select onchange="updateData('${row.id}', 'category', null, this.value)" class="w-full p-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded outline-none text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-medium transition-colors">
+                                <option value="Whisky" ${row.category === 'Whisky' ? 'selected' : ''}>Whisky</option>
+                                <option value="Vodka" ${row.category === 'Vodka' ? 'selected' : ''}>Vodka</option>
+                                <option value="Beer" ${row.category === 'Beer' ? 'selected' : ''}>Beer</option>
+                                <option value="Rum" ${row.category === 'Rum' ? 'selected' : ''}>Rum</option>
+                                <option value="Wine" ${row.category === 'Wine' ? 'selected' : ''}>Wine</option>
+                                <option value="Gin" ${row.category === 'Gin' ? 'selected' : ''}>Gin</option>
+                                <option value="Brandy" ${row.category === 'Brandy' ? 'selected' : ''}>Brandy</option>
+                                <option value="Other" ${!['Whisky','Vodka','Beer','Rum','Wine','Gin','Brandy'].includes(row.category) ? 'selected' : ''}>Other</option>
+                            </select>
+                            <input type="text" value="${row.name}" placeholder="Brand" oninput="updateData('${row.id}', 'name', null, this.value)" 
+                            class="w-full p-1.5 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none font-medium transition-all shadow-inner text-xs md:text-sm">
+                        </div>
                     </td>
                     
                     ${renderInput('mrp', 'q', false)}
@@ -531,10 +574,26 @@
         // Features
         function filterTable() {
             const term = document.getElementById('search-input').value.toLowerCase();
+            const catFilter = document.getElementById('category-filter').value;
             const rows = document.querySelectorAll('#table-body tr');
+            
             rows.forEach(tr => {
-                const input = tr.querySelector('td:first-child input');
+                const input = tr.querySelector('td:first-child input[placeholder="Brand"]');
+                const select = tr.querySelector('td:first-child select');
+                
+                let matchesSearch = false;
                 if (input && input.value.toLowerCase().includes(term)) {
+                    matchesSearch = true;
+                }
+                
+                let matchesCat = false;
+                if (catFilter === 'All') {
+                    matchesCat = true;
+                } else if (select && select.value === catFilter) {
+                    matchesCat = true;
+                }
+                
+                if (matchesSearch && matchesCat) {
                     tr.style.display = '';
                 } else {
                     tr.style.display = 'none';
@@ -657,7 +716,10 @@
                     const tdRedMoney = (val) => `<td class="p-2 border-r border-slate-200 dark:border-slate-700 text-right font-bold text-red-600 dark:text-red-400 bg-red-50/20 dark:bg-red-900/10 whitespace-nowrap">₹${formatMoney(val)}</td>`;
                     
                     tableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td class="sticky-col bg-white dark:bg-darkCard p-1 md:p-2 border-r border-slate-200 dark:border-slate-700 font-bold z-10 text-[10px] md:text-xs truncate max-w-[60px] md:max-w-[120px]" title="${row.name || '-'}">${row.name || '-'}</td>
+                        <td class="sticky-col bg-white dark:bg-darkCard p-1 md:p-2 border-r border-slate-200 dark:border-slate-700 font-bold z-10 text-[10px] md:text-xs truncate max-w-[80px] md:max-w-[120px]" title="${row.name || '-'}">
+                            ${row.category ? `<span class="block text-[9px] md:text-[10px] text-indigo-500 dark:text-indigo-400 uppercase tracking-wider mb-0.5">${row.category}</span>` : ''}
+                            ${row.name || '-'}
+                        </td>
                         ${tdText(row.mrp.q, false)}${tdText(row.mrp.p, false)}${tdText(row.mrp.n, true)}
                         ${tdText(row.discount.q, false)}${tdText(row.discount.p, false)}${tdText(row.discount.n, true)}
                         ${tdText(row.cost.q, false)}${tdText(row.cost.p, false)}${tdText(row.cost.n, true)}
