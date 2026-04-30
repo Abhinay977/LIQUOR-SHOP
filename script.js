@@ -628,67 +628,78 @@
             const dateStr = recordId ? historyData.find(r => r.id === recordId)?.date : new Date().toLocaleDateString();
             const fileName = `Liquor_Shop_Export_${dateStr.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-            // Capture Screenshot Image (Uncropped)
-            let canvas;
-            let targetElement;
-            let originalStyles = {};
-            
-            if (recordId) {
-                targetElement = document.getElementById(`table_${recordId}`);
-            } else {
-                targetElement = document.querySelector('.table-wrapper');
+            const needsScreenshot = ['pdf', 'png', 'jpeg', 'word'].includes(format);
+            let canvas = null;
+            let imgData = null;
+
+            if (needsScreenshot) {
+                let targetElement;
+                let originalStyles = {};
+                let wasHidden = false;
+                
+                if (recordId) {
+                    targetElement = document.getElementById(`table_${recordId}`);
+                    if (targetElement && targetElement.classList.contains('hidden')) {
+                        wasHidden = true;
+                        targetElement.classList.remove('hidden');
+                    }
+                } else {
+                    targetElement = document.querySelector('.table-wrapper');
+                }
+
+                if (!targetElement) {
+                    alert("Could not find the table to export.");
+                    return;
+                }
+
+                try {
+                    // Temporarily modify styles to capture full scrolling area without cropping
+                    const isDark = document.documentElement.classList.contains('dark');
+                    originalStyles = {
+                        backgroundColor: targetElement.style.backgroundColor,
+                        overflow: targetElement.style.overflow,
+                        width: targetElement.style.width,
+                        maxWidth: targetElement.style.maxWidth,
+                        maxHeight: targetElement.style.maxHeight
+                    };
+
+                    targetElement.style.backgroundColor = isDark ? '#1e293b' : '#ffffff';
+                    targetElement.style.overflow = 'visible';
+                    targetElement.style.width = 'max-content';
+                    targetElement.style.maxWidth = 'none';
+                    targetElement.style.maxHeight = 'none';
+
+                    // Optional: hide the actions column for cleaner export
+                    const actionCells = targetElement.querySelectorAll('th:last-child, td:last-child');
+                    actionCells.forEach(cell => cell.style.display = 'none');
+
+                    canvas = await html2canvas(targetElement, { 
+                        scale: 2, 
+                        useCORS: true,
+                        windowWidth: targetElement.scrollWidth,
+                        windowHeight: targetElement.scrollHeight
+                    });
+
+                    // Restore actions column
+                    actionCells.forEach(cell => cell.style.display = '');
+
+                } catch (err) {
+                    console.error("Screenshot Error: ", err);
+                    alert("An error occurred while generating the screenshot.");
+                    if (wasHidden) targetElement.classList.add('hidden');
+                    return;
+                } finally {
+                    // Restore original styles
+                    targetElement.style.backgroundColor = originalStyles.backgroundColor;
+                    targetElement.style.overflow = originalStyles.overflow;
+                    targetElement.style.width = originalStyles.width;
+                    targetElement.style.maxWidth = originalStyles.maxWidth;
+                    targetElement.style.maxHeight = originalStyles.maxHeight;
+                    if (wasHidden) targetElement.classList.add('hidden');
+                }
+
+                imgData = canvas.toDataURL(format === 'png' ? 'image/png' : 'image/jpeg', 1.0);
             }
-
-            if (!targetElement) {
-                alert("Could not find the table to export.");
-                return;
-            }
-
-            try {
-                // Temporarily modify styles to capture full scrolling area without cropping
-                const isDark = document.documentElement.classList.contains('dark');
-                originalStyles = {
-                    backgroundColor: targetElement.style.backgroundColor,
-                    overflow: targetElement.style.overflow,
-                    width: targetElement.style.width,
-                    maxWidth: targetElement.style.maxWidth,
-                    maxHeight: targetElement.style.maxHeight
-                };
-
-                targetElement.style.backgroundColor = isDark ? '#1e293b' : '#ffffff';
-                targetElement.style.overflow = 'visible';
-                targetElement.style.width = 'max-content';
-                targetElement.style.maxWidth = 'none';
-                targetElement.style.maxHeight = 'none';
-
-                // Optional: hide the actions column for cleaner export
-                const actionCells = targetElement.querySelectorAll('th:last-child, td:last-child');
-                actionCells.forEach(cell => cell.style.display = 'none');
-
-                canvas = await html2canvas(targetElement, { 
-                    scale: 2, 
-                    useCORS: true,
-                    windowWidth: targetElement.scrollWidth,
-                    windowHeight: targetElement.scrollHeight
-                });
-
-                // Restore actions column
-                actionCells.forEach(cell => cell.style.display = '');
-
-            } catch (err) {
-                console.error("Screenshot Error: ", err);
-                alert("An error occurred while generating the screenshot.");
-                return;
-            } finally {
-                // Restore original styles
-                targetElement.style.backgroundColor = originalStyles.backgroundColor;
-                targetElement.style.overflow = originalStyles.overflow;
-                targetElement.style.width = originalStyles.width;
-                targetElement.style.maxWidth = originalStyles.maxWidth;
-                targetElement.style.maxHeight = originalStyles.maxHeight;
-            }
-
-            const imgData = canvas.toDataURL('image/jpeg', 1.0);
 
             // Export based on selected format
             if (format === 'pdf') {
@@ -700,10 +711,17 @@
                 doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
                 doc.save(`${fileName}.pdf`);
             } else if (format === 'png' || format === 'jpeg') {
-                const link = document.createElement('a');
-                link.download = `${fileName}.${format}`;
-                link.href = canvas.toDataURL(`image/${format}`, 1.0);
-                link.click();
+                canvas.toBlob((blob) => {
+                    if (!blob) return;
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `${fileName}.${format}`;
+                    link.href = url;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }, `image/${format}`, 1.0);
             } else if (format === 'word') {
                 // Embed the screenshot in Word
                 const htmlStr = `
@@ -723,93 +741,58 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
             }
 
-            // Excel, CSV, Word formats build data from JSON
-            const rows = [];
-            dataToExport.forEach(row => {
-                let bp = 0;
-                let totalMrp = 0, totalDisc = 0;
-                ['q', 'p', 'n'].forEach(s => {
-                    const m = parseFloat(row.mrp[s]) || 0;
-                    const d = parseFloat(row.discount[s]) || 0;
-                    const c = parseFloat(row.cost[s]) || 0;
-                    const q = parseFloat(row.qty[s]) || 0;
-                    const dq = row.dqty ? (parseFloat(row.dqty[s]) || 0) : 0;
-                    totalMrp += (m - c) * q;
-                    totalDisc += (d - c) * dq;
-                });
-                const extraDisc = parseFloat(row.extraDiscount) || 0;
-                bp = totalMrp + totalDisc - extraDisc;
-
-                rows.push({
-                    "Brand Name": row.name || '',
-                    "MRP (Q)": row.mrp.q || '0',
-                    "MRP (P)": row.mrp.p || '0',
-                    "MRP (N)": row.mrp.n || '0',
-                    "Discount (Q)": row.discount.q || '0',
-                    "Discount (P)": row.discount.p || '0',
-                    "Discount (N)": row.discount.n || '0',
-                    "Buying Cost (Q)": row.cost.q || '0',
-                    "Buying Cost (P)": row.cost.p || '0',
-                    "Buying Cost (N)": row.cost.n || '0',
-                    "MRP Qty (Q)": row.qty.q || '0',
-                    "MRP Qty (P)": row.qty.p || '0',
-                    "MRP Qty (N)": row.qty.n || '0',
-                    "Disc Qty (Q)": row.dqty ? row.dqty.q || '0' : '0',
-                    "Disc Qty (P)": row.dqty ? row.dqty.p || '0' : '0',
-                    "Disc Qty (N)": row.dqty ? row.dqty.n || '0' : '0',
-                    "Total MRP Profit": totalMrp.toFixed(2),
-                    "Total Disc Profit": totalDisc.toFixed(2),
-                    "Extra Bargain": extraDisc.toFixed(2),
-                    "Brand Profit": bp.toFixed(2)
-                });
-            });
             if (format === 'excel' || format === 'csv') {
-                // Excel and CSV cannot reliably embed base64 images in a way that works seamlessly across all versions.
-                // However, we export the exact HTML table to retain the visual layout for Excel.
-                if (format === 'excel') {
-                    // Get the table HTML and wrap it for Excel
-                    const tableClone = targetElement.cloneNode(true);
-                    
-                    // Remove actions column from clone
-                    const actionCells = tableClone.querySelectorAll('th:last-child, td:last-child');
-                    actionCells.forEach(cell => cell.remove());
-                    
-                    // Convert inputs to text for static export
-                    tableClone.querySelectorAll('input').forEach(input => {
-                        const span = document.createElement('span');
-                        span.textContent = input.value;
-                        input.parentNode.replaceChild(span, input);
+                // Excel, CSV formats build data from JSON
+                const rows = [];
+                dataToExport.forEach(row => {
+                    let bp = 0;
+                    let totalMrp = 0, totalDisc = 0;
+                    ['q', 'p', 'n'].forEach(s => {
+                        const m = parseFloat(row.mrp[s]) || 0;
+                        const d = parseFloat(row.discount[s]) || 0;
+                        const c = parseFloat(row.cost[s]) || 0;
+                        const q = parseFloat(row.qty[s]) || 0;
+                        const dq = row.dqty ? (parseFloat(row.dqty[s]) || 0) : 0;
+                        totalMrp += (m - c) * q;
+                        totalDisc += (d - c) * dq;
                     });
-                    
-                    const htmlStr = `
-                        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:x='urn:schemas-microsoft-com:office:excel' xmlns='http://www.w3.org/TR/REC-html40'>
-                        <head><meta charset='utf-8'><style>
-                            table { border-collapse: collapse; width: 100%; font-family: Arial; }
-                            th, td { border: 1px solid #ddd; padding: 5px; text-align: center; }
-                        </style></head>
-                        <body>
-                            <h2>Liquor Shop Data Export - ${dateStr}</h2>
-                            ${tableClone.outerHTML}
-                        </body>
-                        </html>
-                    `;
-                    const blob = new Blob(['\ufeff', htmlStr], { type: 'application/vnd.ms-excel' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `${fileName}.xls`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
+                    const extraDisc = parseFloat(row.extraDiscount) || 0;
+                    bp = totalMrp + totalDisc - extraDisc;
+
+                    rows.push({
+                        "Brand Name": row.name || '',
+                        "MRP (Q)": row.mrp.q || '0',
+                        "MRP (P)": row.mrp.p || '0',
+                        "MRP (N)": row.mrp.n || '0',
+                        "Discount (Q)": row.discount.q || '0',
+                        "Discount (P)": row.discount.p || '0',
+                        "Discount (N)": row.discount.n || '0',
+                        "Buying Cost (Q)": row.cost.q || '0',
+                        "Buying Cost (P)": row.cost.p || '0',
+                        "Buying Cost (N)": row.cost.n || '0',
+                        "MRP Qty (Q)": row.qty.q || '0',
+                        "MRP Qty (P)": row.qty.p || '0',
+                        "MRP Qty (N)": row.qty.n || '0',
+                        "Disc Qty (Q)": row.dqty ? row.dqty.q || '0' : '0',
+                        "Disc Qty (P)": row.dqty ? row.dqty.p || '0' : '0',
+                        "Disc Qty (N)": row.dqty ? row.dqty.n || '0' : '0',
+                        "Total MRP Profit": totalMrp.toFixed(2),
+                        "Total Disc Profit": totalDisc.toFixed(2),
+                        "Extra Bargain": extraDisc.toFixed(2),
+                        "Brand Profit": bp.toFixed(2)
+                    });
+                });
+                
+                const worksheet = XLSX.utils.json_to_sheet(rows);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+                
+                if (format === 'excel') {
+                    XLSX.writeFile(workbook, `${fileName}.xlsx`);
                 } else {
-                    // For CSV, we still need to provide data since CSV cannot hold HTML or images
-                    const worksheet = XLSX.utils.json_to_sheet(rows);
-                    const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
                     XLSX.writeFile(workbook, `${fileName}.csv`);
                 }
             }
