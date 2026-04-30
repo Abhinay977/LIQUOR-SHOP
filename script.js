@@ -147,7 +147,43 @@
                 dropdown.classList.add('opacity-0', 'scale-95');
                 setTimeout(() => dropdown.classList.add('hidden'), 200);
             }
+
+            // Close export dropdowns
+            if (!e.target.closest('[id^="export-dropdown-"]') && !e.target.closest('button[onclick^="toggleExportDropdown"]')) {
+                document.querySelectorAll('[id^="export-dropdown-"]').forEach(dropdownEl => {
+                    if (!dropdownEl.classList.contains('hidden')) {
+                        dropdownEl.classList.remove('opacity-100', 'scale-100');
+                        dropdownEl.classList.add('opacity-0', 'scale-95');
+                        setTimeout(() => dropdownEl.classList.add('hidden'), 200);
+                    }
+                });
+            }
         });
+
+        function toggleExportDropdown(id) {
+            const dropdown = document.getElementById(`export-dropdown-${id}`);
+            if (!dropdown) return;
+            
+            // Close all other export dropdowns
+            document.querySelectorAll('[id^="export-dropdown-"]').forEach(el => {
+                if (el.id !== `export-dropdown-${id}` && !el.classList.contains('hidden')) {
+                    el.classList.remove('opacity-100', 'scale-100');
+                    el.classList.add('opacity-0', 'scale-95');
+                    setTimeout(() => el.classList.add('hidden'), 200);
+                }
+            });
+
+            if (dropdown.classList.contains('hidden')) {
+                dropdown.classList.remove('hidden');
+                void dropdown.offsetWidth; // trigger reflow
+                dropdown.classList.remove('opacity-0', 'scale-95');
+                dropdown.classList.add('opacity-100', 'scale-100');
+            } else {
+                dropdown.classList.remove('opacity-100', 'scale-100');
+                dropdown.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => dropdown.classList.add('hidden'), 200);
+            }
+        }
 
         function forceSync() {
             saveData(true);
@@ -574,6 +610,175 @@
             localStorage.setItem('liquorDarkMode', isDark ? '1' : '0');
         }
 
+        async function exportData(format, recordId) {
+            // Close dropdown
+            const dropdownId = recordId ? `export-dropdown-${recordId}` : 'export-dropdown-main';
+            const dropdown = document.getElementById(dropdownId);
+            if (dropdown) {
+                dropdown.classList.add('hidden', 'opacity-0', 'scale-95');
+                dropdown.classList.remove('opacity-100', 'scale-100');
+            }
+
+            const dataToExport = recordId ? historyData.find(r => r.id === recordId)?.data : appData;
+            if (!dataToExport || dataToExport.length === 0) {
+                alert("No data available to export.");
+                return;
+            }
+
+            const dateStr = recordId ? historyData.find(r => r.id === recordId)?.date : new Date().toLocaleDateString();
+            const fileName = `Liquor_Shop_Export_${dateStr.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+            // Image and PDF formats use the DOM
+            if (['pdf', 'png', 'jpeg'].includes(format)) {
+                let targetElement;
+                let wasHidden = false;
+                
+                if (recordId) {
+                    targetElement = document.getElementById(`table_${recordId}`);
+                    if (targetElement && targetElement.classList.contains('hidden')) {
+                        targetElement.classList.remove('hidden');
+                        wasHidden = true;
+                    }
+                } else {
+                    targetElement = document.querySelector('.table-wrapper');
+                }
+
+                if (!targetElement) {
+                    alert("Could not find the table to export.");
+                    return;
+                }
+
+                try {
+                    // Temporarily add a white/dark background to ensure readability in image
+                    const originalBg = targetElement.style.backgroundColor;
+                    const isDark = document.documentElement.classList.contains('dark');
+                    targetElement.style.backgroundColor = isDark ? '#1e293b' : '#ffffff';
+
+                    const canvas = await html2canvas(targetElement, { scale: 2, useCORS: true });
+                    targetElement.style.backgroundColor = originalBg;
+
+                    if (format === 'pdf') {
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF('l', 'mm', 'a4');
+                        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                        const pdfWidth = doc.internal.pageSize.getWidth();
+                        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                        
+                        doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                        doc.save(`${fileName}.pdf`);
+                    } else if (format === 'png' || format === 'jpeg') {
+                        const link = document.createElement('a');
+                        link.download = `${fileName}.${format}`;
+                        link.href = canvas.toDataURL(`image/${format}`, 1.0);
+                        link.click();
+                    }
+                } catch (err) {
+                    console.error("Export Error: ", err);
+                    alert("An error occurred during image/PDF export.");
+                } finally {
+                    if (wasHidden && targetElement) {
+                        targetElement.classList.add('hidden');
+                    }
+                }
+                return;
+            }
+
+            // Excel, CSV, Word formats build data from JSON
+            const rows = [];
+            dataToExport.forEach(row => {
+                let bp = 0;
+                let totalMrp = 0, totalDisc = 0;
+                ['q', 'p', 'n'].forEach(s => {
+                    const m = parseFloat(row.mrp[s]) || 0;
+                    const d = parseFloat(row.discount[s]) || 0;
+                    const c = parseFloat(row.cost[s]) || 0;
+                    const q = parseFloat(row.qty[s]) || 0;
+                    const dq = row.dqty ? (parseFloat(row.dqty[s]) || 0) : 0;
+                    totalMrp += (m - c) * q;
+                    totalDisc += (d - c) * dq;
+                });
+                const extraDisc = parseFloat(row.extraDiscount) || 0;
+                bp = totalMrp + totalDisc - extraDisc;
+
+                rows.push({
+                    "Brand Name": row.name || '',
+                    "MRP (Q)": row.mrp.q || '0',
+                    "MRP (P)": row.mrp.p || '0',
+                    "MRP (N)": row.mrp.n || '0',
+                    "Discount (Q)": row.discount.q || '0',
+                    "Discount (P)": row.discount.p || '0',
+                    "Discount (N)": row.discount.n || '0',
+                    "Buying Cost (Q)": row.cost.q || '0',
+                    "Buying Cost (P)": row.cost.p || '0',
+                    "Buying Cost (N)": row.cost.n || '0',
+                    "MRP Qty (Q)": row.qty.q || '0',
+                    "MRP Qty (P)": row.qty.p || '0',
+                    "MRP Qty (N)": row.qty.n || '0',
+                    "Disc Qty (Q)": row.dqty ? row.dqty.q || '0' : '0',
+                    "Disc Qty (P)": row.dqty ? row.dqty.p || '0' : '0',
+                    "Disc Qty (N)": row.dqty ? row.dqty.n || '0' : '0',
+                    "Total MRP Profit": totalMrp.toFixed(2),
+                    "Total Disc Profit": totalDisc.toFixed(2),
+                    "Extra Bargain": extraDisc.toFixed(2),
+                    "Brand Profit": bp.toFixed(2)
+                });
+            });
+
+            if (format === 'excel' || format === 'csv') {
+                const worksheet = XLSX.utils.json_to_sheet(rows);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+                
+                if (format === 'excel') {
+                    XLSX.writeFile(workbook, `${fileName}.xlsx`);
+                } else {
+                    XLSX.writeFile(workbook, `${fileName}.csv`);
+                }
+            } else if (format === 'word') {
+                let htmlStr = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head><meta charset='utf-8'><title>Export</title>
+                    <style>
+                        table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 10pt; }
+                        th, td { border: 1px solid #999; padding: 4px; text-align: right; }
+                        th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
+                        td:first-child, th:first-child { text-align: left; }
+                        h2 { font-family: Arial, sans-serif; text-align: center; }
+                    </style>
+                    </head><body>
+                    <h2>Liquor Shop Data Export - ${dateStr}</h2>
+                    <table><thead><tr>
+                `;
+                
+                if (rows.length > 0) {
+                    Object.keys(rows[0]).forEach(key => {
+                        htmlStr += `<th>${key}</th>`;
+                    });
+                    htmlStr += `</tr></thead><tbody>`;
+                    
+                    rows.forEach(row => {
+                        htmlStr += `<tr>`;
+                        Object.values(row).forEach(val => {
+                            htmlStr += `<td>${val}</td>`;
+                        });
+                        htmlStr += `</tr>`;
+                    });
+                }
+                
+                htmlStr += `</tbody></table></body></html>`;
+                
+                const blob = new Blob(['\ufeff', htmlStr], { type: 'application/msword' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${fileName}.doc`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+        }
+
 
 
         function toggleHistoryMode() {
@@ -709,7 +914,20 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400"><i class="fa-regular fa-clock"></i> ${timeStr}</p>
                             </div>
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 relative">
+                            <button onclick="toggleExportDropdown('${record.id}')" class="px-3 py-1.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-800 transition-colors text-sm font-medium flex items-center gap-2">
+                                <i class="fa-solid fa-file-export"></i> Export
+                            </button>
+                            <div id="export-dropdown-${record.id}" class="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-darkCard rounded-xl shadow-xl border border-slate-200 dark:border-darkBorder hidden z-[60] overflow-hidden transform opacity-0 scale-95 transition-all duration-200 origin-top-right">
+                                <div class="py-1">
+                                    <button onclick="exportData('pdf', '${record.id}')" class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3"><i class="fa-regular fa-file-pdf text-red-500 w-4"></i> PDF</button>
+                                    <button onclick="exportData('png', '${record.id}')" class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3"><i class="fa-regular fa-image text-blue-500 w-4"></i> PNG</button>
+                                    <button onclick="exportData('jpeg', '${record.id}')" class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3"><i class="fa-regular fa-image text-cyan-500 w-4"></i> JPEG</button>
+                                    <button onclick="exportData('excel', '${record.id}')" class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3"><i class="fa-regular fa-file-excel text-green-600 w-4"></i> Excel</button>
+                                    <button onclick="exportData('csv', '${record.id}')" class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-file-csv text-emerald-500 w-4"></i> CSV</button>
+                                    <button onclick="exportData('word', '${record.id}')" class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3"><i class="fa-regular fa-file-word text-blue-600 w-4"></i> Word</button>
+                                </div>
+                            </div>
                             <button onclick="document.getElementById('table_${record.id}').classList.toggle('hidden')" class="px-3 py-1.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm font-medium">
                                 <i class="fa-solid fa-table"></i> View Details
                             </button>

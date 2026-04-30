@@ -30,6 +30,11 @@
     <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore-compat.js"></script>
 
+    <!-- Export Library SDKs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <!-- Custom Styles -->
     <link rel="stylesheet" href="index.css">
 </head>
@@ -158,9 +163,40 @@
                 <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                 <input type="text" id="search-input" oninput="filterTable()" placeholder="Search brand names..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-darkBorder bg-white dark:bg-darkCard focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
             </div>
-            <button onclick="addRow()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow transition-colors flex items-center gap-2 font-medium">
-                <i class="fa-solid fa-plus"></i> Add Brand Row
-            </button>
+            <div class="flex gap-3">
+                <div class="relative">
+                    <button onclick="toggleExportDropdown('main')" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow transition-colors flex items-center gap-2 font-medium">
+                        <i class="fa-solid fa-file-export"></i> <span class="hidden sm:inline">Export</span>
+                    </button>
+                    <!-- Main Export Dropdown -->
+                    <div id="export-dropdown-main" class="absolute right-0 mt-2 w-48 bg-white dark:bg-darkCard rounded-xl shadow-xl border border-slate-200 dark:border-darkBorder hidden z-50 overflow-hidden transform opacity-0 scale-95 transition-all duration-200 origin-top-right">
+                        <div class="py-1">
+                            <button onclick="exportData('pdf', null)" class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3">
+                                <i class="fa-regular fa-file-pdf text-red-500 w-4"></i> PDF
+                            </button>
+                            <button onclick="exportData('png', null)" class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3">
+                                <i class="fa-regular fa-image text-blue-500 w-4"></i> PNG Image
+                            </button>
+                            <button onclick="exportData('jpeg', null)" class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3">
+                                <i class="fa-regular fa-image text-cyan-500 w-4"></i> JPEG Image
+                            </button>
+                            <button onclick="exportData('excel', null)" class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3">
+                                <i class="fa-regular fa-file-excel text-green-600 w-4"></i> Excel (.xlsx)
+                            </button>
+                            <button onclick="exportData('csv', null)" class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3">
+                                <i class="fa-solid fa-file-csv text-emerald-500 w-4"></i> CSV
+                            </button>
+                            <button onclick="exportData('word', null)" class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3">
+                                <i class="fa-regular fa-file-word text-blue-600 w-4"></i> Word (.doc)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="addRow()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow transition-colors flex items-center gap-2 font-medium">
+                    <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Add Brand Row</span>
+                </button>
+            </div>
         </div>
 
         <!-- Table Container -->
