@@ -54,12 +54,14 @@
                     const data = doc.data();
                     appData = data.appData || [];
                     historyData = data.historyData || [];
+                    sanitizeData(appData);
                     localStorage.setItem('liquorShopData', JSON.stringify(appData));
                     localStorage.setItem('liquorShopHistory', JSON.stringify(historyData));
                 } else {
                     // First time on cloud, migrate local data if exists
                     appData = JSON.parse(localStorage.getItem('liquorShopData')) || [];
                     historyData = JSON.parse(localStorage.getItem('liquorShopHistory')) || [];
+                    sanitizeData(appData);
                     if (appData.length === 0) {
                         appData.push({
                             id: generateId(),
@@ -85,6 +87,7 @@
                 // Fallback to local data so the app still works
                 appData = JSON.parse(localStorage.getItem('liquorShopData')) || [];
                 historyData = JSON.parse(localStorage.getItem('liquorShopHistory')) || [];
+                sanitizeData(appData);
                 if (appData.length === 0) {
                     appData.push({
                         id: generateId(),
@@ -180,6 +183,23 @@
         // Utilities
         function generateId() { return Math.random().toString(36).substr(2, 9); }
         function formatMoney(num) { return num.toFixed(2); }
+
+        function sanitizeData(data) {
+            data.forEach(row => {
+                ['mrp', 'discount', 'cost', 'qty', 'dqty'].forEach(field => {
+                    if (row[field]) {
+                        ['q', 'p', 'n'].forEach(size => {
+                            if (row[field][size] && parseFloat(row[field][size]) < 0) {
+                                row[field][size] = Math.abs(parseFloat(row[field][size])).toString();
+                            }
+                        });
+                    }
+                });
+                if (row.extraDiscount && parseFloat(row.extraDiscount) < 0) {
+                    row.extraDiscount = Math.abs(parseFloat(row.extraDiscount)).toString();
+                }
+            });
+        }
         
         async function saveData(immediate = false) {
             localStorage.setItem('liquorShopData', JSON.stringify(appData));
