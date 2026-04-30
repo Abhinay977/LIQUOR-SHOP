@@ -625,8 +625,10 @@
                 return;
             }
 
-            const dateStr = recordId ? historyData.find(r => r.id === recordId)?.date : new Date().toLocaleDateString();
-            const fileName = `Liquor_Shop_Export_${dateStr.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            // Safely handle potentially missing dates in old history records
+            const rawDate = recordId ? historyData.find(r => r.id === recordId)?.date : new Date().toLocaleDateString();
+            const safeDateStr = String(rawDate || 'History_Record').replace(/[^a-zA-Z0-9]/g, '_');
+            const fileName = `Liquor_Shop_Export_${safeDateStr}`;
 
             const needsScreenshot = ['pdf', 'png', 'jpeg', 'word'].includes(format);
             let canvas = null;
@@ -642,6 +644,9 @@
                     if (targetElement && targetElement.classList.contains('hidden')) {
                         wasHidden = true;
                         targetElement.classList.remove('hidden');
+                        // Force a reflow and wait for the browser to paint before taking a screenshot
+                        void targetElement.offsetWidth;
+                        await new Promise(r => setTimeout(r, 100));
                     }
                 } else {
                     targetElement = document.querySelector('.table-wrapper');
@@ -652,6 +657,7 @@
                     return;
                 }
 
+                let actionCells = [];
                 try {
                     // Temporarily modify styles to capture full scrolling area without cropping
                     const isDark = document.documentElement.classList.contains('dark');
@@ -669,9 +675,11 @@
                     targetElement.style.maxWidth = 'none';
                     targetElement.style.maxHeight = 'none';
 
-                    // Optional: hide the actions column for cleaner export
-                    const actionCells = targetElement.querySelectorAll('th:last-child, td:last-child');
-                    actionCells.forEach(cell => cell.style.display = 'none');
+                    // Only hide the actions column for the main table (History tables don't have one)
+                    if (!recordId) {
+                        actionCells = targetElement.querySelectorAll('th:last-child, td:last-child');
+                        actionCells.forEach(cell => cell.style.display = 'none');
+                    }
 
                     canvas = await html2canvas(targetElement, { 
                         scale: 2, 
@@ -681,7 +689,9 @@
                     });
 
                     // Restore actions column
-                    actionCells.forEach(cell => cell.style.display = '');
+                    if (!recordId) {
+                        actionCells.forEach(cell => cell.style.display = '');
+                    }
 
                 } catch (err) {
                     console.error("Screenshot Error: ", err);
@@ -696,6 +706,11 @@
                     targetElement.style.maxWidth = originalStyles.maxWidth;
                     targetElement.style.maxHeight = originalStyles.maxHeight;
                     if (wasHidden) targetElement.classList.add('hidden');
+                }
+
+                if (canvas.width === 0 || canvas.height === 0) {
+                    alert("Failed to capture the table. The image was empty.");
+                    return;
                 }
 
                 imgData = canvas.toDataURL(format === 'png' ? 'image/png' : 'image/jpeg', 1.0);
@@ -728,7 +743,7 @@
                     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
                     <head><meta charset='utf-8'><title>Export</title></head>
                     <body>
-                        <h2 style="font-family: Arial, sans-serif; text-align: center;">Liquor Shop Data Export - ${dateStr}</h2>
+                        <h2 style="font-family: Arial, sans-serif; text-align: center;">Liquor Shop Data Export - ${safeDateStr}</h2>
                         <img src="${imgData}" style="max-width: 100%; height: auto;" />
                     </body>
                     </html>
