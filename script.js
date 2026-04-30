@@ -635,98 +635,95 @@
             let imgData = null;
 
             if (needsScreenshot) {
-                let targetElement;
-                let originalStyles = {};
+                let originalElement;
                 let wasHidden = false;
                 
                 if (recordId) {
-                    targetElement = document.getElementById(`table_${recordId}`);
-                    if (targetElement && targetElement.classList.contains('hidden')) {
+                    originalElement = document.getElementById(`table_${recordId}`);
+                    if (originalElement && originalElement.classList.contains('hidden')) {
                         wasHidden = true;
-                        targetElement.classList.remove('hidden');
-                        // Force a reflow and wait for the browser to paint before taking a screenshot
-                        void targetElement.offsetWidth;
-                        await new Promise(r => setTimeout(r, 100));
+                        originalElement.classList.remove('hidden');
+                        void originalElement.offsetWidth;
                     }
                 } else {
-                    targetElement = document.querySelector('.table-wrapper');
+                    originalElement = document.querySelector('.table-wrapper');
                 }
 
-                if (!targetElement) {
+                if (!originalElement) {
                     alert("Could not find the table to export.");
                     return;
                 }
 
-                let actionCells = [];
+                let clone = null;
                 try {
-                    // Get full dimensions of the table before we modify anything
-                    const scrollWidth = targetElement.scrollWidth;
-                    const scrollHeight = targetElement.scrollHeight;
-
-                    // Temporarily modify styles to capture full scrolling area without cropping
-                    const isDark = document.documentElement.classList.contains('dark');
-                    originalStyles = {
-                        backgroundColor: targetElement.style.backgroundColor,
-                        overflow: targetElement.style.overflow,
-                        width: targetElement.style.width,
-                        minWidth: targetElement.style.minWidth,
-                        maxWidth: targetElement.style.maxWidth,
-                        maxHeight: targetElement.style.maxHeight,
-                        flexShrink: targetElement.style.flexShrink
-                    };
-
-                    // Force the element to expand to its full scrollable width
-                    targetElement.style.backgroundColor = isDark ? '#1e293b' : '#ffffff';
-                    targetElement.style.overflow = 'visible';
-                    targetElement.style.width = scrollWidth + 'px';
-                    targetElement.style.minWidth = scrollWidth + 'px';
-                    targetElement.style.maxWidth = 'none';
-                    targetElement.style.maxHeight = 'none';
-                    targetElement.style.flexShrink = '0';
-
-                    // Only hide the actions column for the main table (History tables don't have one)
-                    if (!recordId) {
-                        actionCells = targetElement.querySelectorAll('th:last-child, td:last-child');
-                        actionCells.forEach(cell => cell.style.display = 'none');
-                    }
-
-                    // A brief timeout to let the browser apply the styles and recalculate layout
-                    await new Promise(r => setTimeout(r, 50));
-
-                    canvas = await html2canvas(targetElement, { 
-                        scale: 2, 
-                        useCORS: true,
-                        width: scrollWidth,
-                        height: scrollHeight,
-                        windowWidth: scrollWidth + 200,
-                        windowHeight: Math.max(scrollHeight + 200, window.innerHeight),
-                        scrollX: 0,
-                        scrollY: 0
+                    // Clone the element for a pristine screenshot without UI interference
+                    clone = originalElement.cloneNode(true);
+                    
+                    // Replace inputs with spans for a cleaner look and to preserve values
+                    const originalInputs = originalElement.querySelectorAll('input');
+                    const clonedInputs = clone.querySelectorAll('input');
+                    
+                    originalInputs.forEach((input, index) => {
+                        if (clonedInputs[index]) {
+                            const span = document.createElement('span');
+                            span.textContent = input.value || '';
+                            span.style.display = 'inline-block';
+                            span.style.width = '100%';
+                            span.style.textAlign = input.classList.contains('text-right') ? 'right' : 'left';
+                            span.style.padding = '6px';
+                            span.style.fontWeight = '500';
+                            
+                            // If it's a search box or something else, it might look weird, but the table only has data inputs
+                            clonedInputs[index].parentNode.replaceChild(span, clonedInputs[index]);
+                        }
                     });
 
-                    // Restore actions column
+                    // Remove action columns if it's the main table
                     if (!recordId) {
-                        actionCells.forEach(cell => cell.style.display = '');
+                        const actionCells = clone.querySelectorAll('th:last-child, td:last-child');
+                        actionCells.forEach(cell => cell.remove());
                     }
+
+                    // Style the clone to break out of all parent constraints
+                    clone.style.position = 'absolute';
+                    clone.style.top = '0';
+                    clone.style.left = '0';
+                    clone.style.zIndex = '-9999'; // Hide behind main content
+                    clone.style.width = 'max-content'; 
+                    clone.style.overflow = 'visible';
+                    const isDark = document.documentElement.classList.contains('dark');
+                    clone.style.backgroundColor = isDark ? '#1e293b' : '#ffffff';
+                    clone.style.margin = '0';
+                    
+                    // Append to body to escape any relative/flex constraints of the app container
+                    document.body.appendChild(clone);
+
+                    // Wait a tick for browser to paint the clone
+                    await new Promise(r => setTimeout(r, 100));
+
+                    canvas = await html2canvas(clone, { 
+                        scale: 2, 
+                        useCORS: true,
+                        scrollX: 0,
+                        scrollY: 0,
+                        windowWidth: clone.scrollWidth + 200,
+                        windowHeight: Math.max(clone.scrollHeight + 200, window.innerHeight)
+                    });
 
                 } catch (err) {
                     console.error("Screenshot Error: ", err);
                     alert("An error occurred while generating the screenshot.");
-                    if (wasHidden) targetElement.classList.add('hidden');
                     return;
                 } finally {
-                    // Restore original styles
-                    targetElement.style.backgroundColor = originalStyles.backgroundColor;
-                    targetElement.style.overflow = originalStyles.overflow;
-                    targetElement.style.width = originalStyles.width;
-                    targetElement.style.minWidth = originalStyles.minWidth;
-                    targetElement.style.maxWidth = originalStyles.maxWidth;
-                    targetElement.style.maxHeight = originalStyles.maxHeight;
-                    targetElement.style.flexShrink = originalStyles.flexShrink;
-                    if (wasHidden) targetElement.classList.add('hidden');
+                    if (clone && document.body.contains(clone)) {
+                        document.body.removeChild(clone);
+                    }
+                    if (wasHidden && originalElement) {
+                        originalElement.classList.add('hidden');
+                    }
                 }
 
-                if (canvas.width === 0 || canvas.height === 0) {
+                if (!canvas || canvas.width === 0 || canvas.height === 0) {
                     alert("Failed to capture the table. The image was empty.");
                     return;
                 }
