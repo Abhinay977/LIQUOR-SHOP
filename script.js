@@ -766,22 +766,22 @@ async function exportData(format, recordId) {
     ];
 
     let html = `
-      <div style="font-family: system-ui, -apple-system, sans-serif; background:${bg}; color:${text}; padding:16px; display:inline-block; min-width:100%;">
+      <div style="font-family: system-ui, -apple-system, sans-serif; background:${bg}; color:${text}; padding:16px; display:inline-block; min-width:100%; width:max-content;">
         <h2 style="text-align:center; font-size:16px; font-weight:700; margin:0 0 12px 0; color:${text};">
           Liquor Shop — ${recordId ? (historyData.find(r=>r.id===recordId)?.date || "History") : new Date().toLocaleDateString()}
         </h2>
-        <table style="border-collapse:collapse; font-size:11px; width:100%; table-layout:auto;">
+        <table style="border-collapse:separate; border-spacing:0; border-top:1px solid ${borderColor}; border-left:1px solid ${borderColor}; font-size:11px; min-width:100%; width:max-content; table-layout:auto;">
           <thead>
             <tr style="background:${hdrBg};">
-              <th rowspan="2" style="padding:8px 10px; border:1px solid ${borderColor}; text-align:left; white-space:nowrap; vertical-align:middle;">Brand</th>
-              ${colGroups.map(g => `<th colspan="3" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${g.bg}; color:${g.color}; white-space:nowrap;">${g.label}</th>`).join("")}
-              <th rowspan="2" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${isDark?"#164e63":"#ecfeff"}; color:${isDark?"#67e8f9":"#155e75"}; white-space:nowrap; vertical-align:middle;">MRP Profit</th>
-              <th rowspan="2" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${isDark?"#14532d":"#f0fdf4"}; color:${isDark?"#86efac":"#166534"}; white-space:nowrap; vertical-align:middle;">Disc Profit</th>
-              <th rowspan="2" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${isDark?"#450a0a":"#fff1f2"}; color:${isDark?"#fca5a5":"#9f1239"}; white-space:nowrap; vertical-align:middle;">Bargain (₹)</th>
-              <th rowspan="2" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${isDark?"#451a03":"#fffbeb"}; color:${isDark?"#fcd34d":"#92400e"}; white-space:nowrap; vertical-align:middle; font-weight:800;">Brand Profit</th>
+              <th rowspan="2" style="padding:8px 10px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:left; white-space:nowrap; vertical-align:middle;">Brand</th>
+              ${colGroups.map(g => `<th colspan="3" style="padding:6px 8px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:center; background:${g.bg}; color:${g.color}; white-space:nowrap;">${g.label}</th>`).join("")}
+              <th rowspan="2" style="padding:6px 8px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:center; background:${isDark?"#164e63":"#ecfeff"}; color:${isDark?"#67e8f9":"#155e75"}; white-space:nowrap; vertical-align:middle;">MRP Profit</th>
+              <th rowspan="2" style="padding:6px 8px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:center; background:${isDark?"#14532d":"#f0fdf4"}; color:${isDark?"#86efac":"#166534"}; white-space:nowrap; vertical-align:middle;">Disc Profit</th>
+              <th rowspan="2" style="padding:6px 8px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:center; background:${isDark?"#450a0a":"#fff1f2"}; color:${isDark?"#fca5a5":"#9f1239"}; white-space:nowrap; vertical-align:middle;">Bargain (₹)</th>
+              <th rowspan="2" style="padding:6px 8px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:center; background:${isDark?"#451a03":"#fffbeb"}; color:${isDark?"#fcd34d":"#92400e"}; white-space:nowrap; vertical-align:middle; font-weight:800;">Brand Profit</th>
             </tr>
             <tr style="background:${hdrBg};">
-              ${colGroups.map(() => ["Q","P","N"].map(s=>`<th style="padding:4px 6px; border:1px solid ${borderColor}; text-align:center; font-size:10px;">${s}</th>`).join("")).join("")}
+              ${colGroups.map(() => ["Q","P","N"].map(s=>`<th style="padding:4px 6px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:center; font-size:10px;">${s}</th>`).join("")).join("")}
             </tr>
           </thead>
           <tbody>`;
@@ -805,15 +805,15 @@ async function exportData(format, recordId) {
       const mrpColor    = totalMrp  > 0 ? (isDark?"#4ade80":"#16a34a") : totalMrp  < 0 ? (isDark?"#f87171":"#dc2626") : text;
       const discColor   = totalDisc > 0 ? (isDark?"#4ade80":"#16a34a") : totalDisc < 0 ? (isDark?"#f87171":"#dc2626") : text;
 
-      const td = (val) => `<td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; background:${rowBg};">${val || ""}</td>`;
+      const td = (val) => `<td style="padding:5px 7px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:right; background:${rowBg};">${val || ""}</td>`;
 
       html += `<tr>
-        <td style="padding:5px 8px; border:1px solid ${borderColor}; background:${rowBg}; font-weight:600; white-space:nowrap;">${row.name || "—"}</td>
+        <td style="padding:5px 8px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; background:${rowBg}; font-weight:600; white-space:nowrap;">${row.name || "—"}</td>
         ${["mrp","discount","cost","qty","dqty"].map(f => ["q","p","n"].map(s => td(row[f]?.[s])).join("")).join("")}
-        <td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; font-weight:700; color:${mrpColor}; background:${rowBg};">₹${formatMoney(totalMrp)}</td>
-        <td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; font-weight:700; color:${discColor}; background:${rowBg};">₹${formatMoney(totalDisc)}</td>
-        <td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; font-weight:700; color:${isDark?"#f87171":"#dc2626"}; background:${rowBg};">₹${formatMoney(extra)}</td>
-        <td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; font-weight:800; color:${profitColor}; background:${rowBg}; font-size:12px;">₹${formatMoney(bp)}</td>
+        <td style="padding:5px 7px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:right; font-weight:700; color:${mrpColor}; background:${rowBg};">₹${formatMoney(totalMrp)}</td>
+        <td style="padding:5px 7px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:right; font-weight:700; color:${discColor}; background:${rowBg};">₹${formatMoney(totalDisc)}</td>
+        <td style="padding:5px 7px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:right; font-weight:700; color:${isDark?"#f87171":"#dc2626"}; background:${rowBg};">₹${formatMoney(extra)}</td>
+        <td style="padding:5px 7px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:right; font-weight:800; color:${profitColor}; background:${rowBg}; font-size:12px;">₹${formatMoney(bp)}</td>
       </tr>`;
     });
 
