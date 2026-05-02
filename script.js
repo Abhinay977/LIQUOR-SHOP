@@ -748,98 +748,102 @@ async function exportData(format, recordId) {
   let imgData = null;
 
   if (needsScreenshot) {
-    let originalElement;
-    let wasHidden = false;
+    // Build a clean standalone table from data — avoids issues with hidden/mobile
+    // elements, overflow containers, and Tailwind class conflicts in html2canvas.
+    const isDark = document.documentElement.classList.contains("dark");
+    const bg   = isDark ? "#1e293b" : "#ffffff";
+    const text  = isDark ? "#e2e8f0" : "#1e293b";
+    const hdrBg = isDark ? "#1e293b" : "#f1f5f9";
+    const borderColor = isDark ? "#475569" : "#cbd5e1";
 
-    if (recordId) {
-      originalElement = document.getElementById(`table_${recordId}`);
-      if (originalElement && originalElement.classList.contains("hidden")) {
-        wasHidden = true;
-        originalElement.classList.remove("hidden");
-        void originalElement.offsetWidth;
-      }
-    } else {
-      originalElement = document.querySelector(".table-wrapper");
-    }
+    // Header label sets
+    const colGroups = [
+      { label: "MRP",               bg: isDark ? "#1e3a5f" : "#eff6ff", color: isDark ? "#93c5fd" : "#1e40af" },
+      { label: "Discount",          bg: isDark ? "#4a1942" : "#fdf2f8", color: isDark ? "#f9a8d4" : "#9d174d" },
+      { label: "Buying Cost",       bg: isDark ? "#431407" : "#fff7ed", color: isDark ? "#fdba74" : "#9a3412" },
+      { label: "MRP Qty Sold",      bg: isDark ? "#3b0764" : "#faf5ff", color: isDark ? "#d8b4fe" : "#6b21a8" },
+      { label: "Discount Qty Sold", bg: isDark ? "#1e1b4b" : "#eef2ff", color: isDark ? "#a5b4fc" : "#3730a3" },
+    ];
 
-    if (!originalElement) {
-      alert("Could not find the table to export.");
-      return;
-    }
+    let html = `
+      <div style="font-family: system-ui, -apple-system, sans-serif; background:${bg}; color:${text}; padding:16px; display:inline-block; min-width:100%;">
+        <h2 style="text-align:center; font-size:16px; font-weight:700; margin:0 0 12px 0; color:${text};">
+          Liquor Shop — ${recordId ? (historyData.find(r=>r.id===recordId)?.date || "History") : new Date().toLocaleDateString()}
+        </h2>
+        <table style="border-collapse:collapse; font-size:11px; width:100%; table-layout:auto;">
+          <thead>
+            <tr style="background:${hdrBg};">
+              <th rowspan="2" style="padding:8px 10px; border:1px solid ${borderColor}; text-align:left; white-space:nowrap; vertical-align:middle;">Brand</th>
+              ${colGroups.map(g => `<th colspan="3" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${g.bg}; color:${g.color}; white-space:nowrap;">${g.label}</th>`).join("")}
+              <th rowspan="2" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${isDark?"#164e63":"#ecfeff"}; color:${isDark?"#67e8f9":"#155e75"}; white-space:nowrap; vertical-align:middle;">MRP Profit</th>
+              <th rowspan="2" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${isDark?"#14532d":"#f0fdf4"}; color:${isDark?"#86efac":"#166534"}; white-space:nowrap; vertical-align:middle;">Disc Profit</th>
+              <th rowspan="2" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${isDark?"#450a0a":"#fff1f2"}; color:${isDark?"#fca5a5":"#9f1239"}; white-space:nowrap; vertical-align:middle;">Bargain (₹)</th>
+              <th rowspan="2" style="padding:6px 8px; border:1px solid ${borderColor}; text-align:center; background:${isDark?"#451a03":"#fffbeb"}; color:${isDark?"#fcd34d":"#92400e"}; white-space:nowrap; vertical-align:middle; font-weight:800;">Brand Profit</th>
+            </tr>
+            <tr style="background:${hdrBg};">
+              ${colGroups.map(() => ["Q","P","N"].map(s=>`<th style="padding:4px 6px; border:1px solid ${borderColor}; text-align:center; font-size:10px;">${s}</th>`).join("")).join("")}
+            </tr>
+          </thead>
+          <tbody>`;
 
-    let clone = null;
-    try {
-      // Clone the element for a pristine screenshot without UI interference
-      clone = originalElement.cloneNode(true);
-
-      // Replace inputs with spans for a cleaner look and to preserve values
-      const originalInputs = originalElement.querySelectorAll("input");
-      const clonedInputs = clone.querySelectorAll("input");
-
-      originalInputs.forEach((input, index) => {
-        if (clonedInputs[index]) {
-          const span = document.createElement("span");
-          span.textContent = input.value || "";
-          span.style.display = "inline-block";
-          span.style.width = "100%";
-          span.style.textAlign = input.classList.contains("text-right")
-            ? "right"
-            : "left";
-          span.style.padding = "6px";
-          span.style.fontWeight = "500";
-
-          // If it's a search box or something else, it might look weird, but the table only has data inputs
-          clonedInputs[index].parentNode.replaceChild(
-            span,
-            clonedInputs[index],
-          );
-        }
+    dataToExport.forEach((row, i) => {
+      let totalMrp = 0, totalDisc = 0;
+      ["q","p","n"].forEach(s => {
+        const m  = parseFloat(row.mrp?.[s])      || 0;
+        const d  = parseFloat(row.discount?.[s]) || 0;
+        const c  = parseFloat(row.cost?.[s])     || 0;
+        const q  = parseFloat(row.qty?.[s])      || 0;
+        const dq = parseFloat(row.dqty?.[s])     || 0;
+        totalMrp  += (m - c) * q;
+        totalDisc += (d - c) * dq;
       });
+      const extra = parseFloat(row.extraDiscount) || 0;
+      const bp    = totalMrp + totalDisc - extra;
 
-      // Remove action columns if it's the main table
-      if (!recordId) {
-        const actionCells = clone.querySelectorAll(
-          "th:last-child, td:last-child",
-        );
-        actionCells.forEach((cell) => cell.remove());
-      }
+      const rowBg = i % 2 === 0 ? bg : (isDark ? "#263347" : "#f8fafc");
+      const profitColor = bp > 0 ? (isDark?"#4ade80":"#16a34a") : bp < 0 ? (isDark?"#f87171":"#dc2626") : text;
+      const mrpColor    = totalMrp  > 0 ? (isDark?"#4ade80":"#16a34a") : totalMrp  < 0 ? (isDark?"#f87171":"#dc2626") : text;
+      const discColor   = totalDisc > 0 ? (isDark?"#4ade80":"#16a34a") : totalDisc < 0 ? (isDark?"#f87171":"#dc2626") : text;
 
-      // Style the clone to break out of all parent constraints
-      clone.style.position = "absolute";
-      clone.style.top = "0";
-      clone.style.left = "0";
-      clone.style.zIndex = "-9999"; // Hide behind main content
-      clone.style.width = "max-content";
-      clone.style.overflow = "visible";
-      const isDark = document.documentElement.classList.contains("dark");
-      clone.style.backgroundColor = isDark ? "#1e293b" : "#ffffff";
-      clone.style.margin = "0";
+      const td = (val) => `<td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; background:${rowBg};">${val || ""}</td>`;
 
-      // Append to body to escape any relative/flex constraints of the app container
-      document.body.appendChild(clone);
+      html += `<tr>
+        <td style="padding:5px 8px; border:1px solid ${borderColor}; background:${rowBg}; font-weight:600; white-space:nowrap;">${row.name || "—"}</td>
+        ${["mrp","discount","cost","qty","dqty"].map(f => ["q","p","n"].map(s => td(row[f]?.[s])).join("")).join("")}
+        <td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; font-weight:700; color:${mrpColor}; background:${rowBg};">₹${formatMoney(totalMrp)}</td>
+        <td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; font-weight:700; color:${discColor}; background:${rowBg};">₹${formatMoney(totalDisc)}</td>
+        <td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; font-weight:700; color:${isDark?"#f87171":"#dc2626"}; background:${rowBg};">₹${formatMoney(extra)}</td>
+        <td style="padding:5px 7px; border:1px solid ${borderColor}; text-align:right; font-weight:800; color:${profitColor}; background:${rowBg}; font-size:12px;">₹${formatMoney(bp)}</td>
+      </tr>`;
+    });
 
-      // Wait a tick for browser to paint the clone
-      await new Promise((r) => setTimeout(r, 100));
+    html += `</tbody></table></div>`;
 
-      canvas = await html2canvas(clone, {
+    // Mount the clean table off-screen so html2canvas can capture it
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = "position:absolute;top:0;left:0;z-index:-9999;";
+    wrapper.innerHTML = html;
+    document.body.appendChild(wrapper);
+
+    try {
+      await new Promise(r => setTimeout(r, 150));
+      canvas = await html2canvas(wrapper, {
         scale: 2,
         useCORS: true,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: clone.scrollWidth + 200,
-        windowHeight: Math.max(clone.scrollHeight + 200, window.innerHeight),
+        width:  wrapper.scrollWidth,
+        height: wrapper.scrollHeight,
+        windowWidth:  wrapper.scrollWidth  + 100,
+        windowHeight: wrapper.scrollHeight + 100,
+        backgroundColor: bg,
       });
     } catch (err) {
-      console.error("Screenshot Error: ", err);
-      alert("An error occurred while generating the screenshot.");
+      console.error("Screenshot Error:", err);
+      alert("An error occurred while generating the image.");
       return;
     } finally {
-      if (clone && document.body.contains(clone)) {
-        document.body.removeChild(clone);
-      }
-      if (wasHidden && originalElement) {
-        originalElement.classList.add("hidden");
-      }
+      if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
     }
 
     if (!canvas || canvas.width === 0 || canvas.height === 0) {
@@ -847,10 +851,7 @@ async function exportData(format, recordId) {
       return;
     }
 
-    imgData = canvas.toDataURL(
-      format === "png" ? "image/png" : "image/jpeg",
-      1.0,
-    );
+    imgData = canvas.toDataURL(format === "png" ? "image/png" : "image/jpeg", 1.0);
   }
 
   // Export based on selected format
