@@ -819,30 +819,30 @@ async function exportData(format, recordId) {
 
     html += `</tbody></table></div>`;
 
-    // Mount the clean table far off-screen (NOT behind page via z-index)
-    // so the browser performs a full layout pass on all rows before capture.
+    // Mount the wrapper off-screen using position:absolute (NOT fixed, NOT
+    // visibility:hidden — both break html2canvas rendering).
+    // A large negative left keeps it invisible to the user while the browser
+    // still performs a full, normal layout pass on every row.
     const wrapper = document.createElement("div");
-    wrapper.style.cssText = "position:fixed;top:0;left:-99999px;visibility:hidden;";
+    wrapper.style.cssText = "position:absolute;top:0;left:-9999px;";
     wrapper.innerHTML = html;
     document.body.appendChild(wrapper);
 
     try {
-      // Force a full reflow so all rows are laid out, then wait for paint
+      // Trigger a synchronous reflow so every row is laid out before we read
+      // the dimensions or call html2canvas.
       void wrapper.offsetHeight;
       await new Promise(r => setTimeout(r, 300));
 
-      // Read dimensions AFTER layout is complete
-      const rect = wrapper.getBoundingClientRect();
-      const captureW = Math.max(wrapper.scrollWidth,  Math.ceil(rect.width),  100);
-      const captureH = Math.max(wrapper.scrollHeight, Math.ceil(rect.height), 100);
+      const captureW = wrapper.scrollWidth  || wrapper.offsetWidth;
+      const captureH = wrapper.scrollHeight || wrapper.offsetHeight;
 
       canvas = await html2canvas(wrapper, {
         scale: 2,
         useCORS: true,
-        scrollX: 0,
-        scrollY: 0,
-        x: 0,
-        y: 0,
+        // Tell html2canvas to shift its viewport to where the element lives.
+        scrollX: -wrapper.offsetLeft,
+        scrollY: -wrapper.offsetTop,
         width:  captureW,
         height: captureH,
         windowWidth:  captureW  + 200,
