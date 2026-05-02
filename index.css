@@ -283,3 +283,22 @@ input[type="number"] {
     background: rgba(99,102,241,0.1);
 }
 
+/* Read-only value display for history brand modal */
+.hbm-val {
+    background: #f1f5f9;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    text-align: right;
+    min-height: 38px;
+}
+.dark .hbm-val {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+

@@ -452,6 +452,122 @@
         </div>
     </div>
 
+    <!-- ===================== HISTORY BRAND VIEW MODAL (mobile read-only) ===================== -->
+    <div id="history-brand-modal" class="fixed inset-0 z-[55] hidden" aria-modal="true" role="dialog">
+        <!-- Backdrop -->
+        <div onclick="closeHistoryBrandModal()" class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
+
+        <!-- Bottom Sheet -->
+        <div id="history-modal-sheet" class="mobile-sheet absolute bottom-0 left-0 right-0 bg-white dark:bg-darkCard rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh]">
+
+            <!-- Drag handle -->
+            <div class="flex justify-center pt-3 pb-1 flex-shrink-0">
+                <div class="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
+            </div>
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>
+                        <span id="hbm-title">Brand Details</span>
+                    </h3>
+                    <p id="hbm-date" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5"></p>
+                </div>
+                <button onclick="closeHistoryBrandModal()" class="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable content -->
+            <div class="overflow-y-auto flex-1 px-4 py-4 space-y-4">
+
+                <!-- MRP -->
+                <div class="mobile-section">
+                    <div class="mobile-section-label"><i class="fa-solid fa-indian-rupee-sign text-blue-400"></i> MRP (₹)</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div><span class="mobile-sublabel">Full</span><div id="hbm-mrp-q" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Half</span><div id="hbm-mrp-p" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Quarter</span><div id="hbm-mrp-n" class="hbm-val"></div></div>
+                    </div>
+                </div>
+
+                <!-- Discount Price -->
+                <div class="mobile-section">
+                    <div class="mobile-section-label"><i class="fa-solid fa-percent text-pink-400"></i> Discount Price (₹)</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div><span class="mobile-sublabel">Full</span><div id="hbm-discount-q" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Half</span><div id="hbm-discount-p" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Quarter</span><div id="hbm-discount-n" class="hbm-val"></div></div>
+                    </div>
+                </div>
+
+                <!-- Buying Cost -->
+                <div class="mobile-section">
+                    <div class="mobile-section-label"><i class="fa-solid fa-cart-shopping text-orange-400"></i> Buying Cost (₹)</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div><span class="mobile-sublabel">Full</span><div id="hbm-cost-q" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Half</span><div id="hbm-cost-p" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Quarter</span><div id="hbm-cost-n" class="hbm-val"></div></div>
+                    </div>
+                </div>
+
+                <!-- MRP Qty Sold -->
+                <div class="mobile-section">
+                    <div class="mobile-section-label"><i class="fa-solid fa-boxes-stacked text-purple-400"></i> MRP Qty Sold</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div><span class="mobile-sublabel">Full</span><div id="hbm-qty-q" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Half</span><div id="hbm-qty-p" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Quarter</span><div id="hbm-qty-n" class="hbm-val"></div></div>
+                    </div>
+                </div>
+
+                <!-- Discount Qty Sold -->
+                <div class="mobile-section">
+                    <div class="mobile-section-label"><i class="fa-solid fa-hand-holding-dollar text-indigo-400"></i> Discount Qty Sold</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div><span class="mobile-sublabel">Full</span><div id="hbm-dqty-q" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Half</span><div id="hbm-dqty-p" class="hbm-val"></div></div>
+                        <div><span class="mobile-sublabel">Quarter</span><div id="hbm-dqty-n" class="hbm-val"></div></div>
+                    </div>
+                </div>
+
+                <!-- Extra Bargain -->
+                <div class="mobile-section">
+                    <div class="mobile-section-label"><i class="fa-solid fa-scale-unbalanced text-red-400"></i> Extra Bargain Loss (₹)</div>
+                    <div id="hbm-extra" class="hbm-val text-right text-red-600 dark:text-red-400 font-bold text-base">0</div>
+                </div>
+
+                <!-- Profit Summary -->
+                <div class="mobile-results-box">
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div>
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide mb-1">MRP Profit</p>
+                            <p id="hbm-result-mrp" class="text-sm font-bold">₹0.00</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide mb-1">Disc Profit</p>
+                            <p id="hbm-result-disc" class="text-sm font-bold">₹0.00</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold uppercase tracking-wide mb-1">Brand Profit</p>
+                            <p id="hbm-result-brand" class="text-lg font-extrabold">₹0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="h-2"></div>
+            </div>
+
+            <!-- Close button -->
+            <div class="px-4 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-darkCard flex-shrink-0">
+                <button onclick="closeHistoryBrandModal()" class="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Back to History
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Bargain Calculator Modal -->
     <div id="bargain-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[65] items-center justify-center p-4 transition-all duration-300 hidden">
         <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-darkBorder">

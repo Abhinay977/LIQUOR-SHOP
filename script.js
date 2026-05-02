@@ -1088,6 +1088,36 @@ function renderHistoryFeed() {
                         ${tdMoney(bp, "font-bold bg-amber-50/50 dark:bg-amber-900/20")}
                     </tr>`;
     });
+    // Build mobile brand card list (mobile only)
+    let mobileBrandsHtml = `<div id="mobile_brands_${record.id}" class="hidden mt-4 flex flex-col gap-2">`;
+    record.data.forEach((row, rowIdx) => {
+      let rowMrp = 0, rowDisc = 0, rowBottles = 0;
+      ['q','p','n'].forEach((s) => {
+        const m = parseFloat(row.mrp[s]) || 0;
+        const d = parseFloat(row.discount[s]) || 0;
+        const c = parseFloat(row.cost[s]) || 0;
+        const q = parseFloat(row.qty[s]) || 0;
+        const dq = row.dqty ? parseFloat(row.dqty[s]) || 0 : 0;
+        rowMrp  += (m - c) * q;
+        rowDisc += (d - c) * dq;
+        rowBottles += q + dq;
+      });
+      const rowExtra = parseFloat(row.extraDiscount) || 0;
+      const rowBp = rowMrp + rowDisc - rowExtra;
+      const rowProfitColor = rowBp > 0 ? 'color:#059669' : rowBp < 0 ? 'color:#dc2626' : 'color:#64748b';
+      mobileBrandsHtml += `
+        <div class="mobile-brand-card" onclick="openHistoryBrandModal('${record.id}', ${rowIdx})">
+          <div class="mobile-card-icon"><i class="fa-solid fa-wine-bottle"></i></div>
+          <div class="mobile-card-body">
+            <div class="mobile-card-name">${row.name || 'Unnamed Brand'}</div>
+            <div class="mobile-card-meta">${rowBottles} bottle${rowBottles !== 1 ? 's' : ''} sold</div>
+          </div>
+          <div class="mobile-card-profit" style="${rowProfitColor}">₹${formatMoney(rowBp)}</div>
+          <div class="mobile-card-edit-btn" style="cursor:pointer"><i class="fa-solid fa-eye"></i></div>
+        </div>`;
+    });
+    mobileBrandsHtml += `</div>`;
+
     tableHtml += `</tbody></table></div>`;
 
     feedHtml += `
@@ -1116,8 +1146,8 @@ function renderHistoryFeed() {
                                     <button onclick="exportData('word', '${record.id}')" class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-3"><i class="fa-regular fa-file-word text-blue-600 w-4"></i> Word</button>
                                 </div>
                             </div>
-                            <button onclick="document.getElementById('table_${record.id}').classList.toggle('hidden')" class="px-3 py-1.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm font-medium">
-                                <i class="fa-solid fa-table"></i> View Details
+                            <button onclick="toggleHistoryDetails('${record.id}')" class="px-3 py-1.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm font-medium flex items-center gap-2">
+                                <i class="fa-solid fa-table"></i> <span>View Details</span>
                             </button>
                         </div>
                     </div>
@@ -1138,11 +1168,107 @@ function renderHistoryFeed() {
                     </div>
                     
                     ${tableHtml}
+                    ${mobileBrandsHtml}
                 </div>
                 `;
   });
 
   feed.innerHTML = feedHtml;
+}
+
+
+/**
+ * Toggles history detail view: shows mobile brand cards on mobile,
+ * wide table on desktop.
+ */
+function toggleHistoryDetails(recordId) {
+  const isMobile = window.innerWidth < 768;
+  const tableDiv  = document.getElementById(`table_${recordId}`);
+  const mobileDiv = document.getElementById(`mobile_brands_${recordId}`);
+  if (isMobile) {
+    if (mobileDiv) mobileDiv.classList.toggle('hidden');
+  } else {
+    if (tableDiv)  tableDiv.classList.toggle('hidden');
+  }
+}
+
+// Store reference to currently-open history brand for the view modal
+let _histBrandRecord = null;
+let _histBrandRow    = null;
+
+/**
+ * Opens a read-only bottom-sheet showing all field values for a historical brand entry.
+ */
+function openHistoryBrandModal(recordId, rowIdx) {
+  const record = historyData.find((r) => r.id === recordId);
+  if (!record || !record.data[rowIdx]) return;
+  _histBrandRecord = record;
+  _histBrandRow    = record.data[rowIdx];
+  const row = _histBrandRow;
+
+  // Header
+  const el = (id) => document.getElementById(id);
+  el('hbm-title').textContent = row.name || 'Unnamed Brand';
+  el('hbm-date').textContent  = record.date;
+
+  // Helper to set read-only display value
+  const sv = (id, val) => { const e = el(id); if (e) e.textContent = val || '—'; };
+
+  ['q','p','n'].forEach((s) => {
+    sv(`hbm-mrp-${s}`,      row.mrp      ? row.mrp[s]      : '');
+    sv(`hbm-discount-${s}`, row.discount ? row.discount[s] : '');
+    sv(`hbm-cost-${s}`,     row.cost     ? row.cost[s]     : '');
+    sv(`hbm-qty-${s}`,      row.qty      ? row.qty[s]      : '');
+    sv(`hbm-dqty-${s}`,     row.dqty     ? row.dqty[s]     : '');
+  });
+  sv('hbm-extra', row.extraDiscount || '0');
+
+  // Compute profits
+  let totalMrp = 0, totalDisc = 0;
+  ['q','p','n'].forEach((s) => {
+    const m = parseFloat(row.mrp[s]) || 0;
+    const d = parseFloat(row.discount[s]) || 0;
+    const c = parseFloat(row.cost[s]) || 0;
+    const q = parseFloat(row.qty[s]) || 0;
+    const dq = row.dqty ? parseFloat(row.dqty[s]) || 0 : 0;
+    totalMrp  += (m - c) * q;
+    totalDisc += (d - c) * dq;
+  });
+  const extra = parseFloat(row.extraDiscount) || 0;
+  const brand = totalMrp + totalDisc - extra;
+  const colorFn = (v) => v > 0 ? '#059669' : v < 0 ? '#dc2626' : '#64748b';
+
+  const setMoney = (id, val) => {
+    const e = el(id); if (!e) return;
+    e.textContent  = '₹' + formatMoney(val);
+    e.style.color  = colorFn(val);
+  };
+  setMoney('hbm-result-mrp',   totalMrp);
+  setMoney('hbm-result-disc',  totalDisc);
+  setMoney('hbm-result-brand', brand);
+
+  // Show modal
+  const modal = document.getElementById('history-brand-modal');
+  const sheet = document.getElementById('history-modal-sheet');
+  sheet.classList.remove('closing');
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Closes the history brand view modal.
+ */
+function closeHistoryBrandModal() {
+  const modal = document.getElementById('history-brand-modal');
+  const sheet = document.getElementById('history-modal-sheet');
+  sheet.classList.add('closing');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    sheet.classList.remove('closing');
+    document.body.style.overflow = '';
+    _histBrandRecord = null;
+    _histBrandRow    = null;
+  }, 220);
 }
 
 // =============================================
