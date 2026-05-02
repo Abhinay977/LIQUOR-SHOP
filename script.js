@@ -962,9 +962,11 @@ function toggleHistoryMode() {
   if (mainApp.classList.contains("hidden")) {
     mainApp.classList.remove("hidden");
     historyApp.classList.add("hidden");
+    historyApp.style.display = "";
   } else {
     mainApp.classList.add("hidden");
     historyApp.classList.remove("hidden");
+    historyApp.style.display = "flex";
     renderHistoryFeed();
   }
 }
