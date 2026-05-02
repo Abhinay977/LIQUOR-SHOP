@@ -4,7 +4,7 @@
 }
 
 /* Sticky behaviors */
-thead th {
+thead {
     position: sticky;
     top: 0;
     z-index: 20;
@@ -14,7 +14,7 @@ thead th {
     left: 0;
     z-index: 10;
 }
-thead th.sticky-col {
+thead .sticky-col {
     z-index: 30; /* Highest priority for top-left corner */
 }
 
