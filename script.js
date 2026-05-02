@@ -676,6 +676,7 @@ function renderTable() {
     updateRowCalculations(row);
   });
   updateDashboard();
+  renderCardList();
 }
 
 // Features
@@ -1129,6 +1130,269 @@ function renderHistoryFeed() {
 
   feed.innerHTML = feedHtml;
 }
+
+// =============================================
+// MOBILE CARD VIEW + EDIT MODAL
+// =============================================
+
+let mobileEditRowId = null;
+
+/**
+ * Renders the mobile-only card list (visible on < md screens).
+ * Each card shows brand name, total bottles, brand profit, and an Edit button.
+ */
+function renderCardList() {
+  const container = document.getElementById('mobile-card-list');
+  if (!container) return;
+
+  if (appData.length === 0) {
+    container.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500">
+        <i class="fa-solid fa-wine-bottle text-4xl mb-3 opacity-40"></i>
+        <p class="text-sm">No brands yet. Tap <b>Add Brand Row</b> below to get started.</p>
+      </div>`;
+    return;
+  }
+
+  let html = '';
+  const searchTerm = (document.getElementById('search-input')?.value || '').toLowerCase();
+
+  appData.forEach((row) => {
+    if (!row.dqty) row.dqty = { q: '', p: '', n: '' };
+
+    // Filter by search
+    if (searchTerm && !(row.name || '').toLowerCase().includes(searchTerm)) return;
+
+    // Compute totals
+    let totalMrpProfit = 0, totalDiscProfit = 0, totalBottles = 0;
+    ['q', 'p', 'n'].forEach((s) => {
+      const mrp  = parseFloat(row.mrp[s])      || 0;
+      const disc = parseFloat(row.discount[s]) || 0;
+      const cost = parseFloat(row.cost[s])     || 0;
+      const qty  = parseFloat(row.qty[s])      || 0;
+      const dqty = parseFloat(row.dqty[s])     || 0;
+      totalMrpProfit  += (mrp  - cost) * qty;
+      totalDiscProfit += (disc - cost) * dqty;
+      totalBottles    += qty + dqty;
+    });
+    const extraDisc   = parseFloat(row.extraDiscount) || 0;
+    const brandProfit = totalMrpProfit + totalDiscProfit - extraDisc;
+
+    const profitColor = brandProfit > 0
+      ? 'color:#059669' // emerald
+      : brandProfit < 0
+        ? 'color:#dc2626' // red
+        : 'color:#64748b';
+
+    const brandLabel = row.name || '<span style="color:#94a3b8;font-style:italic">Unnamed Brand</span>';
+
+    html += `
+      <div class="mobile-brand-card" onclick="openMobileEditModal('${row.id}')">
+        <div class="mobile-card-icon">
+          <i class="fa-solid fa-wine-bottle"></i>
+        </div>
+        <div class="mobile-card-body">
+          <div class="mobile-card-name">${row.name || 'Unnamed Brand'}</div>
+          <div class="mobile-card-meta">${totalBottles} bottle${totalBottles !== 1 ? 's' : ''} sold</div>
+        </div>
+        <div class="mobile-card-profit" style="${profitColor}">₹${formatMoney(brandProfit)}</div>
+        <button class="mobile-card-edit-btn" onclick="event.stopPropagation(); openMobileEditModal('${row.id}')" title="Edit">
+          <i class="fa-solid fa-pen"></i>
+        </button>
+      </div>`;
+  });
+
+  // "Add brand" button at bottom
+  html += `
+    <button class="mobile-add-card" onclick="addRow()">
+      <i class="fa-solid fa-plus"></i> Add Brand
+    </button>`;
+
+  container.innerHTML = html;
+}
+
+/**
+ * Opens the mobile edit modal for the given row ID and populates all fields.
+ */
+function openMobileEditModal(rowId) {
+  const row = appData.find((r) => r.id === rowId);
+  if (!row) return;
+  mobileEditRowId = rowId;
+
+  // Populate header
+  document.getElementById('medit-brand-title').textContent =
+    row.name ? `Edit: ${row.name}` : 'Edit Brand';
+
+  // Brand name
+  document.getElementById('medit-name').value = row.name || '';
+
+  // 5 field groups
+  const fields = ['mrp', 'discount', 'cost', 'qty', 'dqty'];
+  const sizes  = ['q', 'p', 'n'];
+  fields.forEach((f) => {
+    sizes.forEach((s) => {
+      const el = document.getElementById(`medit-${f}-${s}`);
+      if (el) el.value = row[f] ? (row[f][s] || '') : '';
+    });
+  });
+
+  // Extra bargain
+  document.getElementById('medit-extra').value = row.extraDiscount || '';
+
+  // Compute live results
+  mobileEditLiveCalc();
+
+  // Show modal (reset any closing animation)
+  const modal = document.getElementById('mobile-edit-modal');
+  const sheet = document.getElementById('mobile-modal-sheet');
+  sheet.classList.remove('closing');
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden'; // prevent background scroll
+}
+
+/**
+ * Closes the mobile edit modal with a slide-down animation.
+ */
+function closeMobileEditModal() {
+  const modal = document.getElementById('mobile-edit-modal');
+  const sheet = document.getElementById('mobile-modal-sheet');
+  sheet.classList.add('closing');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    sheet.classList.remove('closing');
+    document.body.style.overflow = '';
+    mobileEditRowId = null;
+  }, 220);
+}
+
+/**
+ * Saves all values from the mobile modal back to appData and re-renders.
+ */
+function saveMobileEdit() {
+  if (!mobileEditRowId) return;
+  const row = appData.find((r) => r.id === mobileEditRowId);
+  if (!row) return;
+
+  // Name
+  row.name = document.getElementById('medit-name').value;
+
+  // 5 numeric field groups
+  const fields = ['mrp', 'discount', 'cost', 'qty', 'dqty'];
+  const sizes  = ['q', 'p', 'n'];
+  fields.forEach((f) => {
+    if (!row[f]) row[f] = { q: '', p: '', n: '' };
+    sizes.forEach((s) => {
+      const el = document.getElementById(`medit-${f}-${s}`);
+      if (el) {
+        let val = el.value.replace(/[^0-9.]/g, '').replace(/(\.[^.]*)\..*/, '$1');
+        row[f][s] = val;
+      }
+    });
+  });
+
+  // Extra bargain
+  const extraEl = document.getElementById('medit-extra');
+  if (extraEl) {
+    let val = extraEl.value.replace(/[^0-9.]/g, '').replace(/(\.[^.]*)\..*/, '$1');
+    row.extraDiscount = val;
+  }
+
+  saveData();
+  renderTable(); // re-renders table (desktop) + card list (mobile)
+  closeMobileEditModal();
+}
+
+/**
+ * Deletes the currently-open row from the mobile modal.
+ */
+function deleteMobileRow() {
+  if (!mobileEditRowId) return;
+  const row = appData.find((r) => r.id === mobileEditRowId);
+  const name = row ? (row.name || 'this brand') : 'this brand';
+  if (confirm(`Delete "${name}"? This cannot be undone.`)) {
+    appData = appData.filter((r) => r.id !== mobileEditRowId);
+    saveData(true);
+    renderTable();
+    closeMobileEditModal();
+  }
+}
+
+/**
+ * Live-calculates profit inside the modal as the user types.
+ */
+function mobileEditLiveCalc() {
+  const g = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+
+  let totalMrp = 0, totalDisc = 0;
+  ['q', 'p', 'n'].forEach((s) => {
+    const mrp  = g(`medit-mrp-${s}`);
+    const disc = g(`medit-discount-${s}`);
+    const cost = g(`medit-cost-${s}`);
+    const qty  = g(`medit-qty-${s}`);
+    const dqty = g(`medit-dqty-${s}`);
+    totalMrp  += (mrp  - cost) * qty;
+    totalDisc += (disc - cost) * dqty;
+  });
+  const extra  = g('medit-extra');
+  const brand  = totalMrp + totalDisc - extra;
+
+  const colorFn = (v) => v > 0 ? '#059669' : v < 0 ? '#dc2626' : '#64748b';
+
+  const mrpEl   = document.getElementById('medit-result-mrp');
+  const discEl  = document.getElementById('medit-result-disc');
+  const brandEl = document.getElementById('medit-result-brand');
+
+  if (mrpEl)   { mrpEl.textContent   = '₹' + formatMoney(totalMrp);  mrpEl.style.color   = colorFn(totalMrp); }
+  if (discEl)  { discEl.textContent  = '₹' + formatMoney(totalDisc); discEl.style.color  = colorFn(totalDisc); }
+  if (brandEl) { brandEl.textContent = '₹' + formatMoney(brand);     brandEl.style.color = colorFn(brand); }
+}
+
+/**
+ * Strips non-numeric characters from a mobile input (allows decimals only).
+ */
+function sanitizeMobileInput(el) {
+  el.value = el.value.replace(/[^0-9.]/g, '').replace(/(\.[^.]*)\..*/g, '$1');
+}
+
+/**
+ * Opens the bargain calculator modal from inside the mobile edit modal.
+ * Sets the row ID using the currently-open mobile modal's row.
+ */
+function openBargainModalFromMobile() {
+  if (!mobileEditRowId) return;
+  // The bargain modal expects currentBargainRowId and the row's discount values
+  // to be already in appData. First, flush the current modal inputs to appData so
+  // the bargain calc has up-to-date discount prices.
+  const row = appData.find((r) => r.id === mobileEditRowId);
+  if (!row) return;
+
+  // Temporarily flush discount values so bargain calc is accurate
+  ['q', 'p', 'n'].forEach((s) => {
+    const el = document.getElementById(`medit-discount-${s}`);
+    if (el) row.discount[s] = el.value || '';
+  });
+  row.name = document.getElementById('medit-name').value;
+
+  openBargainModal(mobileEditRowId);
+}
+
+// Patch calculateAndAddBargain so it also refreshes the mobile modal after calc
+const _origCalculateAndAddBargain = calculateAndAddBargain;
+calculateAndAddBargain = function() {
+  _origCalculateAndAddBargain();
+  // If a mobile edit modal was open, re-open it to reflect updated extra discount
+  if (mobileEditRowId) {
+    const rowId = mobileEditRowId;
+    setTimeout(() => openMobileEditModal(rowId), 50);
+  }
+};
+
+// Patch filterTable so searching also re-renders the mobile card list
+const _origFilterTable = filterTable;
+filterTable = function() {
+  _origFilterTable();
+  renderCardList();
+};
 
 // Initialization
 window.onload = () => {

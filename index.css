@@ -60,3 +60,226 @@ input[type="number"] {
 .dark ::-webkit-scrollbar-thumb:hover {
     background: #64748b;
 }
+
+/* =============================================
+   MOBILE CARD VIEW + EDIT MODAL
+   ============================================= */
+
+/* Slide-up animation for the bottom sheet */
+@keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes slideDown {
+    from { transform: translateY(0);    opacity: 1; }
+    to   { transform: translateY(100%); opacity: 0; }
+}
+
+.mobile-sheet {
+    animation: slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.mobile-sheet.closing {
+    animation: slideDown 0.22s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* Brand card */
+.mobile-brand-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.mobile-brand-card:active {
+    transform: scale(0.985);
+    box-shadow: 0 0 0 2px #6366f1;
+}
+.dark .mobile-brand-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.mobile-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #eef2ff;
+    color: #6366f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+.dark .mobile-card-icon {
+    background: rgba(99,102,241,0.15);
+    color: #a5b4fc;
+}
+
+.mobile-card-body {
+    flex: 1;
+    min-width: 0;
+}
+.mobile-card-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dark .mobile-card-name {
+    color: #f1f5f9;
+}
+.mobile-card-meta {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.mobile-card-profit {
+    font-weight: 800;
+    font-size: 15px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.mobile-card-edit-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #6366f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+.mobile-card-edit-btn:hover,
+.mobile-card-edit-btn:active {
+    background: #c7d2fe;
+}
+.dark .mobile-card-edit-btn {
+    background: rgba(99,102,241,0.15);
+    color: #a5b4fc;
+}
+.dark .mobile-card-edit-btn:hover,
+.dark .mobile-card-edit-btn:active {
+    background: rgba(99,102,241,0.3);
+}
+
+/* ---- Mobile Edit Modal ---- */
+
+.mobile-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+.dark .mobile-section {
+    background: rgba(255,255,255,0.03);
+    border-color: #334155;
+}
+
+.mobile-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.dark .mobile-section-label {
+    color: #94a3b8;
+}
+
+.mobile-sublabel {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.mobile-input {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+}
+.mobile-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+.dark .mobile-input {
+    background: #0f172a;
+    border-color: #475569;
+    color: #f1f5f9;
+}
+.dark .mobile-input:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129,140,248,0.2);
+}
+
+/* Live results box */
+.mobile-results-box {
+    background: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%);
+    border: 1.5px solid #c7d2fe;
+    border-radius: 14px;
+    padding: 14px 16px;
+}
+.dark .mobile-results-box {
+    background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(16,185,129,0.08) 100%);
+    border-color: rgba(99,102,241,0.3);
+}
+
+/* Add brand card on mobile */
+.mobile-add-card {
+    border: 2px dashed #c7d2fe;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #6366f1;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    background: transparent;
+    width: 100%;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.mobile-add-card:hover, .mobile-add-card:active {
+    background: #eef2ff;
+}
+.dark .mobile-add-card {
+    border-color: rgba(99,102,241,0.35);
+    color: #a5b4fc;
+}
+.dark .mobile-add-card:hover, .dark .mobile-add-card:active {
+    background: rgba(99,102,241,0.1);
+}
+
