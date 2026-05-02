@@ -819,34 +819,22 @@ async function exportData(format, recordId) {
 
     html += `</tbody></table></div>`;
 
-    // Mount the wrapper off-screen using position:absolute (NOT fixed, NOT
-    // visibility:hidden — both break html2canvas rendering).
-    // A large negative left keeps it invisible to the user while the browser
-    // still performs a full, normal layout pass on every row.
+    // Mount the wrapper at top-left but invisible. Using left:-9999px can cause 
+    // some browsers (like Safari or newer Chrome) to cull the table body 
+    // from rendering, resulting in only the headers being captured.
     const wrapper = document.createElement("div");
-    wrapper.style.cssText = "position:absolute;top:0;left:-9999px;";
+    wrapper.style.cssText = "position:absolute; top:0; left:0; width:max-content; min-width:100%; z-index:-9999; opacity:0; pointer-events:none;";
     wrapper.innerHTML = html;
     document.body.appendChild(wrapper);
 
     try {
-      // Trigger a synchronous reflow so every row is laid out before we read
-      // the dimensions or call html2canvas.
+      // Trigger a synchronous reflow so every row is laid out
       void wrapper.offsetHeight;
-      await new Promise(r => setTimeout(r, 300));
-
-      const captureW = wrapper.scrollWidth  || wrapper.offsetWidth;
-      const captureH = wrapper.scrollHeight || wrapper.offsetHeight;
+      await new Promise(r => setTimeout(r, 400));
 
       canvas = await html2canvas(wrapper, {
         scale: 2,
         useCORS: true,
-        // Tell html2canvas to shift its viewport to where the element lives.
-        scrollX: -wrapper.offsetLeft,
-        scrollY: -wrapper.offsetTop,
-        width:  captureW,
-        height: captureH,
-        windowWidth:  captureW  + 200,
-        windowHeight: captureH + 200,
         backgroundColor: bg,
         logging: false,
       });
