@@ -1,6 +1,6 @@
 // Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAaCykQ_rT5mY6hvkQU7INX9BCs9ud5N9c",
+  apiKey: "AIzaSyAgiRHMOrbKUqAaQaP0SZcaciliCYPcEKM",
   authDomain: "liquor-shop-c21da.firebaseapp.com",
   projectId: "liquor-shop-c21da",
   storageBucket: "liquor-shop-c21da.firebasestorage.app",
