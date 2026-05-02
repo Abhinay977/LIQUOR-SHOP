@@ -1017,7 +1017,7 @@ function renderHistoryFeed() {
 
     // Build Table HTML
     let tableHtml = `
-                <div id="table_${record.id}" class="hidden mt-4 overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+                <div id="table_${record.id}" class="mt-4 overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg" style="display:none">
                 <table class="min-w-max w-full text-sm text-left border-collapse">
                     <thead class="text-xs uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-300 dark:border-slate-600">
                         <tr>
@@ -1090,7 +1090,7 @@ function renderHistoryFeed() {
                     </tr>`;
     });
     // Build mobile brand card list (mobile only)
-    let mobileBrandsHtml = `<div id="mobile_brands_${record.id}" class="hidden mt-4 flex flex-col gap-2">`;
+    let mobileBrandsHtml = `<div id="mobile_brands_${record.id}" class="mobile-history-brands" style="display:none">`;
     record.data.forEach((row, rowIdx) => {
       let rowMrp = 0, rowDisc = 0, rowBottles = 0;
       ['q','p','n'].forEach((s) => {
@@ -1187,9 +1187,11 @@ function toggleHistoryDetails(recordId) {
   const tableDiv  = document.getElementById(`table_${recordId}`);
   const mobileDiv = document.getElementById(`mobile_brands_${recordId}`);
   if (isMobile) {
-    if (mobileDiv) mobileDiv.classList.toggle('hidden');
+    if (!mobileDiv) return;
+    mobileDiv.style.display = mobileDiv.style.display === 'none' ? 'flex' : 'none';
   } else {
-    if (tableDiv)  tableDiv.classList.toggle('hidden');
+    if (!tableDiv) return;
+    tableDiv.style.display = tableDiv.style.display === 'none' ? 'block' : 'none';
   }
 }
 

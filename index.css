@@ -301,4 +301,10 @@ input[type="number"] {
     color: #f1f5f9;
 }
 
-
+/* History tab mobile brand card list container */
+.mobile-history-brands {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 1rem;
+}
