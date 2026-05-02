@@ -819,24 +819,36 @@ async function exportData(format, recordId) {
 
     html += `</tbody></table></div>`;
 
-    // Mount the clean table off-screen so html2canvas can capture it
+    // Mount the clean table far off-screen (NOT behind page via z-index)
+    // so the browser performs a full layout pass on all rows before capture.
     const wrapper = document.createElement("div");
-    wrapper.style.cssText = "position:absolute;top:0;left:0;z-index:-9999;";
+    wrapper.style.cssText = "position:fixed;top:0;left:-99999px;visibility:hidden;";
     wrapper.innerHTML = html;
     document.body.appendChild(wrapper);
 
     try {
-      await new Promise(r => setTimeout(r, 150));
+      // Force a full reflow so all rows are laid out, then wait for paint
+      void wrapper.offsetHeight;
+      await new Promise(r => setTimeout(r, 300));
+
+      // Read dimensions AFTER layout is complete
+      const rect = wrapper.getBoundingClientRect();
+      const captureW = Math.max(wrapper.scrollWidth,  Math.ceil(rect.width),  100);
+      const captureH = Math.max(wrapper.scrollHeight, Math.ceil(rect.height), 100);
+
       canvas = await html2canvas(wrapper, {
         scale: 2,
         useCORS: true,
         scrollX: 0,
         scrollY: 0,
-        width:  wrapper.scrollWidth,
-        height: wrapper.scrollHeight,
-        windowWidth:  wrapper.scrollWidth  + 100,
-        windowHeight: wrapper.scrollHeight + 100,
+        x: 0,
+        y: 0,
+        width:  captureW,
+        height: captureH,
+        windowWidth:  captureW  + 200,
+        windowHeight: captureH + 200,
         backgroundColor: bg,
+        logging: false,
       });
     } catch (err) {
       console.error("Screenshot Error:", err);
