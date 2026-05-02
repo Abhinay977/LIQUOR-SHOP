@@ -271,7 +271,8 @@ function generateId() {
   return Math.random().toString(36).substr(2, 9);
 }
 function formatMoney(num) {
-  return num.toFixed(2);
+  const n = Number(num);
+  return isNaN(n) ? '0.00' : n.toFixed(2);
 }
 
 function sanitizeData(data) {
@@ -1093,11 +1094,11 @@ function renderHistoryFeed() {
     record.data.forEach((row, rowIdx) => {
       let rowMrp = 0, rowDisc = 0, rowBottles = 0;
       ['q','p','n'].forEach((s) => {
-        const m = parseFloat(row.mrp[s]) || 0;
-        const d = parseFloat(row.discount[s]) || 0;
-        const c = parseFloat(row.cost[s]) || 0;
-        const q = parseFloat(row.qty[s]) || 0;
-        const dq = row.dqty ? parseFloat(row.dqty[s]) || 0 : 0;
+        const m = parseFloat(row.mrp?.[s])      || 0;
+        const d = parseFloat(row.discount?.[s]) || 0;
+        const c = parseFloat(row.cost?.[s])     || 0;
+        const q = parseFloat(row.qty?.[s])      || 0;
+        const dq = parseFloat(row.dqty?.[s])    || 0;
         rowMrp  += (m - c) * q;
         rowDisc += (d - c) * dq;
         rowBottles += q + dq;
@@ -1211,26 +1212,29 @@ function openHistoryBrandModal(recordId, rowIdx) {
   el('hbm-title').textContent = row.name || 'Unnamed Brand';
   el('hbm-date').textContent  = record.date;
 
-  // Helper to set read-only display value
-  const sv = (id, val) => { const e = el(id); if (e) e.textContent = val || '—'; };
+  // Helper to set read-only display value (handles 0 correctly)
+  const sv = (id, val) => {
+    const e = el(id);
+    if (e) e.textContent = (val !== '' && val !== null && val !== undefined) ? val : '—';
+  };
 
   ['q','p','n'].forEach((s) => {
-    sv(`hbm-mrp-${s}`,      row.mrp      ? row.mrp[s]      : '');
-    sv(`hbm-discount-${s}`, row.discount ? row.discount[s] : '');
-    sv(`hbm-cost-${s}`,     row.cost     ? row.cost[s]     : '');
-    sv(`hbm-qty-${s}`,      row.qty      ? row.qty[s]      : '');
-    sv(`hbm-dqty-${s}`,     row.dqty     ? row.dqty[s]     : '');
+    sv(`hbm-mrp-${s}`,      row.mrp      ? (row.mrp[s]      ?? '') : '');
+    sv(`hbm-discount-${s}`, row.discount ? (row.discount[s] ?? '') : '');
+    sv(`hbm-cost-${s}`,     row.cost     ? (row.cost[s]     ?? '') : '');
+    sv(`hbm-qty-${s}`,      row.qty      ? (row.qty[s]      ?? '') : '');
+    sv(`hbm-dqty-${s}`,     row.dqty     ? (row.dqty[s]     ?? '') : '');
   });
-  sv('hbm-extra', row.extraDiscount || '0');
+  sv('hbm-extra', row.extraDiscount ?? '0');
 
-  // Compute profits
+  // Compute profits — null-safe field access for old records
   let totalMrp = 0, totalDisc = 0;
   ['q','p','n'].forEach((s) => {
-    const m = parseFloat(row.mrp[s]) || 0;
-    const d = parseFloat(row.discount[s]) || 0;
-    const c = parseFloat(row.cost[s]) || 0;
-    const q = parseFloat(row.qty[s]) || 0;
-    const dq = row.dqty ? parseFloat(row.dqty[s]) || 0 : 0;
+    const m = parseFloat(row.mrp?.[s])  || 0;
+    const d = parseFloat(row.discount?.[s]) || 0;
+    const c = parseFloat(row.cost?.[s]) || 0;
+    const q = parseFloat(row.qty?.[s])  || 0;
+    const dq = parseFloat(row.dqty?.[s]) || 0;
     totalMrp  += (m - c) * q;
     totalDisc += (d - c) * dq;
   });
