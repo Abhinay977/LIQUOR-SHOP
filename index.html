@@ -233,8 +233,9 @@
                 </tbody>
             </table>
         </div>
+        </div>
 
-        <!-- History Content -->
+        <!-- History Content (sibling of main-app-content, NOT nested inside it) -->
         <div id="history-content" class="hidden flex-grow" style="flex-direction: column;">
             <!-- History Toolbar -->
             <div class="flex justify-between items-center mb-6 bg-white dark:bg-darkCard p-4 rounded-xl shadow border border-slate-200 dark:border-darkBorder">
@@ -256,8 +257,6 @@
                 <p>No historical data available.</p>
             </div>
         </div>
-        
-    </div>
 
     <!-- ===================== MOBILE EDIT MODAL ===================== -->
     <div id="mobile-edit-modal" class="fixed inset-0 z-[55] hidden" aria-modal="true" role="dialog">
