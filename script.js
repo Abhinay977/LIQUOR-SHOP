@@ -819,24 +819,36 @@ async function exportData(format, recordId) {
 
     html += `</tbody></table></div>`;
 
-    // Mount the wrapper at top-left but invisible. Using left:-9999px can cause 
-    // some browsers (like Safari or newer Chrome) to cull the table body 
-    // from rendering, resulting in only the headers being captured.
+    // Mount the wrapper in a completely hidden 1x1 container.
+    // We use the onclone callback to move the actual table to the body
+    // in the cloned document, bypassing any browser culling or opacity issues.
+    const targetId = "export-target-" + Date.now();
     const wrapper = document.createElement("div");
-    wrapper.style.cssText = "position:absolute; top:0; left:0; width:max-content; min-width:100%; z-index:-9999; opacity:0; pointer-events:none;";
-    wrapper.innerHTML = html;
+    wrapper.style.cssText = "position:absolute; top:0; left:0; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none; z-index:-9999;";
+    wrapper.innerHTML = `<div id="${targetId}" style="width:max-content; min-width:100%;">${html}</div>`;
     document.body.appendChild(wrapper);
 
     try {
-      // Trigger a synchronous reflow so every row is laid out
+      // Trigger a synchronous reflow
       void wrapper.offsetHeight;
       await new Promise(r => setTimeout(r, 400));
 
-      canvas = await html2canvas(wrapper, {
+      const targetEl = document.getElementById(targetId);
+      canvas = await html2canvas(targetEl, {
         scale: 2,
         useCORS: true,
         backgroundColor: bg,
         logging: false,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById(targetId);
+          if (el) {
+            // Move out of hidden wrapper to avoid opacity/clipping inheritances
+            el.style.position = 'absolute';
+            el.style.top = '0px';
+            el.style.left = '0px';
+            clonedDoc.body.appendChild(el);
+          }
+        }
       });
     } catch (err) {
       console.error("Screenshot Error:", err);
