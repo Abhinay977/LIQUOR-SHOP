@@ -22,45 +22,54 @@ let historyData = [];
 let currentUser = null;
 let saveTimeout = null;
 
-// Check for redirect errors on page load
-auth.getRedirectResult().catch((error) => {
-  console.error("Redirect Auth Error:", error);
-  const errorMsg = document.getElementById("login-error-msg");
-  if (errorMsg) {
-    if (
-      error.code === "auth/invalid-api-key" ||
-      error.code === "auth/unauthorized-domain"
-    ) {
-      errorMsg.textContent =
-        "Configuration Error: Please update your API key restrictions in Google Cloud Console.";
-    } else {
-      errorMsg.textContent = "Sign-in failed: " + error.message;
+// Auth Initialization — await redirect result FIRST to avoid race condition
+(async () => {
+  try {
+    // This must complete before onAuthStateChanged runs so the session cookie
+    // is set and the observer sees the correct user immediately.
+    const result = await auth.getRedirectResult();
+    if (result && result.user) {
+      console.log("Redirect sign-in successful:", result.user.displayName);
+    }
+  } catch (error) {
+    console.error("Redirect Auth Error:", error);
+    const errorMsg = document.getElementById("login-error-msg");
+    if (errorMsg) {
+      if (
+        error.code === "auth/invalid-api-key" ||
+        error.code === "auth/unauthorized-domain"
+      ) {
+        errorMsg.textContent =
+          "Configuration Error: Please update your API key restrictions in Google Cloud Console.";
+      } else {
+        errorMsg.textContent = "Sign-in failed: " + error.message;
+      }
     }
   }
-});
 
-// Auth State Observer
-auth.onAuthStateChanged((user) => {
-  const loginScreen = document.getElementById("login-screen");
-  const appContainer = document.getElementById("app-container");
-  const loadingScreen = document.getElementById("loading-screen");
+  // Auth State Observer — runs after redirect result is settled
+  auth.onAuthStateChanged((user) => {
+    const loginScreen = document.getElementById("login-screen");
+    const appContainer = document.getElementById("app-container");
+    const loadingScreen = document.getElementById("loading-screen");
 
-  if (loadingScreen) {
-    loadingScreen.classList.add("hidden");
-  }
+    if (loadingScreen) {
+      loadingScreen.classList.add("hidden");
+    }
 
-  if (user) {
-    currentUser = user;
-    loginScreen.classList.add("hidden");
-    appContainer.classList.remove("hidden");
-    if (typeof updateProfileUI === "function") updateProfileUI(user);
-    loadDataFromFirestore();
-  } else {
-    currentUser = null;
-    loginScreen.classList.remove("hidden");
-    appContainer.classList.add("hidden");
-  }
-});
+    if (user) {
+      currentUser = user;
+      loginScreen.classList.add("hidden");
+      appContainer.classList.remove("hidden");
+      if (typeof updateProfileUI === "function") updateProfileUI(user);
+      loadDataFromFirestore();
+    } else {
+      currentUser = null;
+      loginScreen.classList.remove("hidden");
+      appContainer.classList.add("hidden");
+    }
+  });
+})();
 
 async function loadDataFromFirestore() {
   if (!currentUser) return;
