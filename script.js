@@ -1,6 +1,9 @@
 // Firebase Configuration
+// NOTE: Firebase web API keys are intended to be public (they identify the project,
+// not grant admin access). Security is enforced via Firebase Security Rules and
+// authorized domains in the Firebase Console (Authentication > Settings > Authorized domains).
 const firebaseConfig = {
-  apiKey: "AIzaSyAgiRHMOrbKUqAaQaP0SZcaciliCYPcEKM",
+  apiKey: "AIzaSyDr1PWp6sNdAwe0JfhsPkFT6m8-33XSH9U",
   authDomain: "liquor-shop-c21da.firebaseapp.com",
   projectId: "liquor-shop-c21da",
   storageBucket: "liquor-shop-c21da.firebasestorage.app",
@@ -250,9 +253,12 @@ function signInWithGoogle() {
   // Use signInWithRedirect instead of Popup to avoid mobile browser popup blockers
   auth.signInWithRedirect(provider).catch((error) => {
     console.error("Auth Error:", error);
-    if (error.code === "auth/invalid-api-key") {
+    if (error.code === "auth/invalid-api-key" || error.code === "auth/api-key-not-found") {
       errorMsg.textContent =
-        "Configuration Error: Please update your Firebase keys in script.js";
+        "Configuration Error: API key is invalid. Please check your Firebase project settings.";
+    } else if (error.code === "auth/unauthorized-domain") {
+      errorMsg.textContent =
+        "Unauthorized domain. Add this domain in Firebase Console > Authentication > Settings > Authorized domains.";
     } else {
       errorMsg.textContent =
         "Sign-in request failed. Check console for details.";
