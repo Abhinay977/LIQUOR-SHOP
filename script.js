@@ -39,6 +39,19 @@ let historyData = [];
 let currentUser = null;
 let saveTimeout = null;
 
+// Check for redirect errors on page load
+auth.getRedirectResult().catch((error) => {
+  console.error("Redirect Auth Error:", error);
+  const errorMsg = document.getElementById("login-error-msg");
+  if (errorMsg) {
+    if (error.code === "auth/invalid-api-key" || error.code === "auth/unauthorized-domain") {
+      errorMsg.textContent = "Configuration Error: Please update your API key restrictions in Google Cloud Console.";
+    } else {
+      errorMsg.textContent = "Sign-in failed: " + error.message;
+    }
+  }
+});
+
 // Auth State Observer
 auth.onAuthStateChanged((user) => {
   const loginScreen = document.getElementById("login-screen");
@@ -236,15 +249,16 @@ function forceSync() {
 
 function signInWithGoogle() {
   const errorMsg = document.getElementById("login-error-msg");
-  errorMsg.textContent = ""; // clear previous errors
+  errorMsg.textContent = "Redirecting to Google..."; // show a loading message
 
-  auth.signInWithPopup(provider).catch((error) => {
+  // Use signInWithRedirect instead of Popup to avoid mobile browser popup blockers
+  auth.signInWithRedirect(provider).catch((error) => {
     console.error("Auth Error:", error);
     if (error.code === "auth/invalid-api-key") {
       errorMsg.textContent =
         "Configuration Error: Please update your Firebase keys in script.js";
     } else {
-      errorMsg.textContent = "Sign-in failed. Check console for details.";
+      errorMsg.textContent = "Sign-in request failed. Check console for details.";
     }
   });
 }
