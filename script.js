@@ -25,54 +25,32 @@ let historyData = [];
 let currentUser = null;
 let saveTimeout = null;
 
-// Auth Initialization — await redirect result FIRST to avoid race condition
-(async () => {
-  try {
-    // This must complete before onAuthStateChanged runs so the session cookie
-    // is set and the observer sees the correct user immediately.
-    const result = await auth.getRedirectResult();
-    if (result && result.user) {
-      console.log("Redirect sign-in successful:", result.user.displayName);
-    }
-  } catch (error) {
-    console.error("Redirect Auth Error:", error);
-    const errorMsg = document.getElementById("login-error-msg");
-    if (errorMsg) {
-      if (
-        error.code === "auth/invalid-api-key" ||
-        error.code === "auth/unauthorized-domain"
-      ) {
-        errorMsg.textContent =
-          "Configuration Error: Please update your API key restrictions in Google Cloud Console.";
-      } else {
-        errorMsg.textContent = "Sign-in failed: " + error.message;
-      }
-    }
+// Auth State Observer
+// signInWithPopup is used (not signInWithRedirect) because this app is hosted
+// on GitHub Pages, which does NOT support the /__/firebase/init.json endpoint
+// that Firebase Hosting provides. signInWithRedirect depends on that endpoint
+// and silently stalls/fails on GitHub Pages.
+auth.onAuthStateChanged((user) => {
+  const loginScreen = document.getElementById("login-screen");
+  const appContainer = document.getElementById("app-container");
+  const loadingScreen = document.getElementById("loading-screen");
+
+  if (loadingScreen) {
+    loadingScreen.classList.add("hidden");
   }
 
-  // Auth State Observer — runs after redirect result is settled
-  auth.onAuthStateChanged((user) => {
-    const loginScreen = document.getElementById("login-screen");
-    const appContainer = document.getElementById("app-container");
-    const loadingScreen = document.getElementById("loading-screen");
-
-    if (loadingScreen) {
-      loadingScreen.classList.add("hidden");
-    }
-
-    if (user) {
-      currentUser = user;
-      loginScreen.classList.add("hidden");
-      appContainer.classList.remove("hidden");
-      if (typeof updateProfileUI === "function") updateProfileUI(user);
-      loadDataFromFirestore();
-    } else {
-      currentUser = null;
-      loginScreen.classList.remove("hidden");
-      appContainer.classList.add("hidden");
-    }
-  });
-})();
+  if (user) {
+    currentUser = user;
+    loginScreen.classList.add("hidden");
+    appContainer.classList.remove("hidden");
+    if (typeof updateProfileUI === "function") updateProfileUI(user);
+    loadDataFromFirestore();
+  } else {
+    currentUser = null;
+    loginScreen.classList.remove("hidden");
+    appContainer.classList.add("hidden");
+  }
+});
 
 async function loadDataFromFirestore() {
   if (!currentUser) return;
@@ -248,22 +226,38 @@ function forceSync() {
 
 function signInWithGoogle() {
   const errorMsg = document.getElementById("login-error-msg");
-  errorMsg.textContent = "Redirecting to Google..."; // show a loading message
+  errorMsg.textContent = "Opening Google sign-in...";
 
-  // Use signInWithRedirect instead of Popup to avoid mobile browser popup blockers
-  auth.signInWithRedirect(provider).catch((error) => {
-    console.error("Auth Error:", error);
-    if (error.code === "auth/invalid-api-key" || error.code === "auth/api-key-not-found") {
-      errorMsg.textContent =
-        "Configuration Error: API key is invalid. Please check your Firebase project settings.";
-    } else if (error.code === "auth/unauthorized-domain") {
-      errorMsg.textContent =
-        "Unauthorized domain. Add this domain in Firebase Console > Authentication > Settings > Authorized domains.";
-    } else {
-      errorMsg.textContent =
-        "Sign-in request failed. Check console for details.";
-    }
-  });
+  // Use signInWithPopup — works on GitHub Pages.
+  // signInWithRedirect CANNOT be used here because it requires Firebase Hosting's
+  // /__/firebase/init.json endpoint which returns 404 on GitHub Pages.
+  auth
+    .signInWithPopup(provider)
+    .then((result) => {
+      errorMsg.textContent = "";
+      console.log("Sign-in successful:", result.user.displayName);
+    })
+    .catch((error) => {
+      console.error("Auth Error:", error);
+      if (
+        error.code === "auth/invalid-api-key" ||
+        error.code === "auth/api-key-not-found"
+      ) {
+        errorMsg.textContent =
+          "Configuration Error: API key is invalid. Please check your Firebase project settings.";
+      } else if (error.code === "auth/unauthorized-domain") {
+        errorMsg.textContent =
+          "Unauthorized domain. Please add this domain in Firebase Console \u203a Authentication \u203a Settings \u203a Authorized domains.";
+      } else if (error.code === "auth/popup-blocked") {
+        errorMsg.textContent =
+          "Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.";
+      } else if (error.code === "auth/popup-closed-by-user") {
+        errorMsg.textContent = "Sign-in was cancelled. Please try again.";
+      } else {
+        errorMsg.textContent =
+          "Sign-in failed: " + (error.message || "Unknown error");
+      }
+    });
 }
 
 function logout() {
