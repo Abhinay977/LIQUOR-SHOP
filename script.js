@@ -458,6 +458,20 @@ function closeBargainModal() {
   modal.classList.add("hidden");
   modal.classList.remove("flex");
   currentBargainRowId = null;
+
+  // If the bargain calc was opened from inside the mobile edit modal,
+  // sync the updated extraDiscount value back to the modal input and
+  // re-show the mobile edit modal (which was underneath).
+  if (mobileEditRowId) {
+    const row = appData.find((r) => r.id === mobileEditRowId);
+    if (row) {
+      const extraEl = document.getElementById('medit-extra');
+      if (extraEl) {
+        extraEl.value = row.extraDiscount || '';
+      }
+      mobileEditLiveCalc();
+    }
+  }
 }
 
 function calculateAndAddBargain() {
@@ -1376,16 +1390,6 @@ function openBargainModalFromMobile() {
   openBargainModal(mobileEditRowId);
 }
 
-// Patch calculateAndAddBargain so it also refreshes the mobile modal after calc
-const _origCalculateAndAddBargain = calculateAndAddBargain;
-calculateAndAddBargain = function() {
-  _origCalculateAndAddBargain();
-  // If a mobile edit modal was open, re-open it to reflect updated extra discount
-  if (mobileEditRowId) {
-    const rowId = mobileEditRowId;
-    setTimeout(() => openMobileEditModal(rowId), 50);
-  }
-};
 
 // Patch filterTable so searching also re-renders the mobile card list
 const _origFilterTable = filterTable;
