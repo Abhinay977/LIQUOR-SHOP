@@ -819,13 +819,12 @@ async function exportData(format, recordId) {
 
     html += `</tbody></table></div>`;
 
-    // Mount the wrapper in a completely hidden 1x1 container.
-    // We use the onclone callback to move the actual table to the body
-    // in the cloned document, bypassing any browser culling or opacity issues.
-    const targetId = "export-target-" + Date.now();
+    // Mount the wrapper far out of view vertically.
+    // We avoid opacity:0 or display:none as html2canvas copies those exactly.
+    // We avoid left:-9999px as some browsers cull horizontally offscreen elements.
     const wrapper = document.createElement("div");
-    wrapper.style.cssText = "position:absolute; top:0; left:0; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none; z-index:-9999;";
-    wrapper.innerHTML = `<div id="${targetId}" style="width:max-content; min-width:100%;">${html}</div>`;
+    wrapper.style.cssText = "position:absolute; top:-99999px; left:0; width:max-content; min-width:100%; z-index:-9999;";
+    wrapper.innerHTML = html;
     document.body.appendChild(wrapper);
 
     try {
@@ -833,22 +832,11 @@ async function exportData(format, recordId) {
       void wrapper.offsetHeight;
       await new Promise(r => setTimeout(r, 400));
 
-      const targetEl = document.getElementById(targetId);
-      canvas = await html2canvas(targetEl, {
+      canvas = await html2canvas(wrapper, {
         scale: 2,
         useCORS: true,
         backgroundColor: bg,
-        logging: false,
-        onclone: (clonedDoc) => {
-          const el = clonedDoc.getElementById(targetId);
-          if (el) {
-            // Move out of hidden wrapper to avoid opacity/clipping inheritances
-            el.style.position = 'absolute';
-            el.style.top = '0px';
-            el.style.left = '0px';
-            clonedDoc.body.appendChild(el);
-          }
-        }
+        logging: false
       });
     } catch (err) {
       console.error("Screenshot Error:", err);
