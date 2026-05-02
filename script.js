@@ -1,8 +1,4 @@
 // Firebase Configuration
-// IMPORTANT SECURITY NOTICE:
-// 1. Web API keys are public by design. To prevent abuse, you MUST restrict this API key
-//    to your specific domain in the Google Cloud Console (APIs & Services > Credentials).
-// 2. Enable Firebase App Check in the Firebase Console and replace the ReCaptcha site key below.
 const firebaseConfig = {
   apiKey: "AIzaSyAaCykQ_rT5mY6hvkQU7INX9BCs9ud5N9c",
   authDomain: "liquor-shop-c21da.firebaseapp.com",
@@ -15,19 +11,6 @@ const firebaseConfig = {
 // Initialize Firebase
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
-
-  // Initialize App Check
-  // TODO: Replace 'YOUR_RECAPTCHA_V3_SITE_KEY' with your actual site key from Google Cloud Console.
-  if (typeof firebase.appCheck === "function") {
-    const appCheck = firebase.appCheck();
-    appCheck.activate(
-      // You can use ReCaptchaV3Provider or ReCaptchaEnterpriseProvider
-      new firebase.appCheck.ReCaptchaV3Provider(
-        "6LfXTdIsAAAAAAU72_7pEqsaZyqEqCLP_2U9iH8q",
-      ),
-      true, // isTokenAutoRefreshEnabled
-    );
-  }
 }
 
 const auth = firebase.auth();
