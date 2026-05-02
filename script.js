@@ -44,8 +44,12 @@ auth.getRedirectResult().catch((error) => {
   console.error("Redirect Auth Error:", error);
   const errorMsg = document.getElementById("login-error-msg");
   if (errorMsg) {
-    if (error.code === "auth/invalid-api-key" || error.code === "auth/unauthorized-domain") {
-      errorMsg.textContent = "Configuration Error: Please update your API key restrictions in Google Cloud Console.";
+    if (
+      error.code === "auth/invalid-api-key" ||
+      error.code === "auth/unauthorized-domain"
+    ) {
+      errorMsg.textContent =
+        "Configuration Error: Please update your API key restrictions in Google Cloud Console.";
     } else {
       errorMsg.textContent = "Sign-in failed: " + error.message;
     }
@@ -258,7 +262,8 @@ function signInWithGoogle() {
       errorMsg.textContent =
         "Configuration Error: Please update your Firebase keys in script.js";
     } else {
-      errorMsg.textContent = "Sign-in request failed. Check console for details.";
+      errorMsg.textContent =
+        "Sign-in request failed. Check console for details.";
     }
   });
 }
