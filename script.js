@@ -709,29 +709,78 @@ function applySortAndFilter() {
     renderTable();
 }
 
+function generateSmartInsights(data) {
+    let insights = [];
+
+    if (!data || data.length === 0) return insights;
+
+    // 1. BEST SELLING BRAND
+    let bestBrand = null;
+    let maxSales = 0;
+
+    data.forEach(row => {
+        let totalSales = calculateTotalSales(row);
+        if (totalSales > maxSales) {
+            maxSales = totalSales;
+            bestBrand = row;
+        }
+    });
+
+    if (bestBrand && maxSales > 0) {
+        insights.push(`🔥 Best Seller: ${bestBrand.name || "Unnamed Brand"} (${maxSales} bottles sold)`);
+    }
+
+    // 2. LOSS DETECTION (Advanced)
+    data.forEach(row => {
+        let profit = calculateBrandProfit(row);
+        if (profit < -100) { // ignore small fluctuations
+            insights.push(`⚠️ ${row.name || "Unnamed Brand"} is in LOSS (₹${profit.toFixed(0)})`);
+        }
+    });
+
+    // 3. PRICE OPTIMIZATION (Advanced)
+    data.forEach(row => {
+        ['q','p','n'].forEach(size => {
+            let cost = parseFloat(row.cost?.[size]) || 0;
+            let discount = parseFloat(row.discount?.[size]) || 0;
+
+            if (discount < cost && discount !== 0) {
+                let margin = 15; // 15₹ profit target
+                let suggested = (cost + margin).toFixed(0);
+                insights.push(`💡 ${row.name || "Unnamed Brand"}: Increase ${size.toUpperCase()} price to ₹${suggested}`);
+            }
+        });
+    });
+
+    // 4. HIGH PROFIT HIGHLIGHT
+    data.forEach(row => {
+        let profit = calculateBrandProfit(row);
+        if (profit > 500) {
+            insights.push(`🚀 ${row.name || "Unnamed Brand"} is highly profitable (₹${profit.toFixed(0)})`);
+        }
+    });
+
+    return insights;
+}
+
 function updateInsights(data) {
     const el = document.getElementById("insight-box");
     if (!el) return;
 
-    let filterText = "";
-    if (currentFilterType === 'loss') filterText = "Showing Loss Data Only";
-    else if (currentFilterType === 'profit') filterText = "Showing Profit Data Only";
-    else if (currentFilterType === 'sales') filterText = "Showing High Sales Only";
+    const insights = generateSmartInsights(data);
 
-    if (!data.length) {
-        el.textContent = filterText;
+    if (insights.length === 0) {
+        el.textContent = "✅ All brands performing well";
         return;
     }
 
-    const sortedData = [...data].sort((a, b) => calculateBrandProfit(b) - calculateBrandProfit(a));
-    const top = sortedData[0];
-    const profit = calculateBrandProfit(top);
-
-    if (profit > 0) {
-        el.textContent = filterText ? `${filterText} | 🔥 Top Brand: ${top.name || "Unnamed"} (₹${profit.toFixed(0)})` : `🔥 Top Brand: ${top.name || "Unnamed"} (₹${profit.toFixed(0)})`;
-    } else {
-        el.textContent = filterText;
-    }
+    el.innerHTML = insights.map(i => {
+        if (i.includes("LOSS")) return `<div class="text-red-500 dark:text-red-400">• ${i}</div>`;
+        if (i.includes("Best Seller")) return `<div class="text-emerald-500 dark:text-emerald-400">• ${i}</div>`;
+        if (i.includes("Increase")) return `<div class="text-orange-500 dark:text-orange-400">• ${i}</div>`;
+        if (i.includes("profitable")) return `<div class="text-blue-500 dark:text-blue-400">• ${i}</div>`;
+        return `<div>• ${i}</div>`;
+    }).join('');
 }
 
 function getProcessedHistoryData(data) {
