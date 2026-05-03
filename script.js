@@ -825,7 +825,7 @@ async function exportData(format, recordId) {
     wrapper.style.top = "0";
     wrapper.style.left = "0";
     wrapper.style.zIndex = "-1";
-    wrapper.style.opacity = "0";
+    // opacity: 0 removed because html2canvas copies opacity, leading to a blank image
     wrapper.innerHTML = html;
     document.body.appendChild(wrapper);
 
@@ -867,7 +867,9 @@ async function exportData(format, recordId) {
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
     if (imgHeight > doc.internal.pageSize.getHeight()) {
-      doc.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const scaledWidth = (pageHeight * canvas.width) / canvas.height;
+      doc.addImage(imgData, "JPEG", 0, 0, scaledWidth, pageHeight);
     } else {
       doc.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
     }
