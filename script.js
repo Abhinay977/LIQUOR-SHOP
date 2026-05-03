@@ -25,6 +25,9 @@ let historyData = [];
 let currentUser = null;
 let saveTimeout = null;
 
+let currentSortType = 'default';
+let currentFilterType = 'all';
+
 // Auth State Observer
 // signInWithPopup is used (not signInWithRedirect) because this app is hosted
 // on GitHub Pages, which does NOT support the /__/firebase/init.json endpoint
@@ -578,15 +581,145 @@ function initHeaders() {
   subHeaders.innerHTML = html;
 }
 
+// --- NEW HELPER FUNCTIONS FOR SORTING/FILTERING ---
+function calculateBrandProfit(row) {
+    let totalMrpProfit = 0;
+    let totalDiscProfit = 0;
+    ['q', 'p', 'n'].forEach(size => {
+        const mrp = parseFloat(row.mrp?.[size]) || 0;
+        const disc = parseFloat(row.discount?.[size]) || 0;
+        const cost = parseFloat(row.cost?.[size]) || 0;
+        const qty = parseFloat(row.qty?.[size]) || 0;
+        const dqty = row.dqty ? (parseFloat(row.dqty[size]) || 0) : 0;
+        totalMrpProfit += (mrp - cost) * qty;
+        totalDiscProfit += (disc - cost) * dqty;
+    });
+    const extraDisc = parseFloat(row.extraDiscount) || 0;
+    return totalMrpProfit + totalDiscProfit - extraDisc;
+}
+
+function calculateTotalSales(row) {
+    let totalSales = 0;
+    ['q', 'p', 'n'].forEach(size => {
+        const qty = parseFloat(row.qty?.[size]) || 0;
+        const dqty = row.dqty ? (parseFloat(row.dqty[size]) || 0) : 0;
+        totalSales += qty + dqty;
+    });
+    return totalSales;
+}
+
+function getTopBrands(data) {
+    const sorted = [...data].sort((a, b) => calculateBrandProfit(b) - calculateBrandProfit(a));
+    const top = {};
+    let rank = 1;
+    for (let i = 0; i < sorted.length; i++) {
+        if (rank > 3) break;
+        const profit = calculateBrandProfit(sorted[i]);
+        if (profit > 0) {
+            top[sorted[i].id] = rank;
+            rank++;
+        } else {
+            break; // Don't rank zero or negative profit brands
+        }
+    }
+    return top;
+}
+
+function getFilteredAndSortedData() {
+    const searchTerm = (document.getElementById('search-input')?.value || '').toLowerCase();
+    
+    // Filter
+    let result = appData.filter(row => {
+        if (searchTerm && !(row.name || '').toLowerCase().includes(searchTerm)) return false;
+        
+        if (currentFilterType === 'profit') {
+            return calculateBrandProfit(row) > 0;
+        } else if (currentFilterType === 'loss') {
+            return calculateBrandProfit(row) < 0;
+        } else if (currentFilterType === 'sales') {
+            return calculateTotalSales(row) > 10;
+        }
+        return true;
+    });
+
+    // Sort
+    if (currentSortType === 'profit-high') {
+        result.sort((a, b) => calculateBrandProfit(b) - calculateBrandProfit(a));
+    } else if (currentSortType === 'profit-low') {
+        result.sort((a, b) => calculateBrandProfit(a) - calculateBrandProfit(b));
+    } else if (currentSortType === 'name-asc') {
+        result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+
+    return result;
+}
+
+function setFilter(type) {
+    currentFilterType = type;
+    
+    // Update button styles
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm', 'border-indigo-600', 'active-filter');
+        btn.classList.add('bg-white', 'dark:bg-darkCard', 'border', 'border-slate-200', 'dark:border-slate-700', 'hover:bg-slate-50', 'dark:hover:bg-slate-800');
+        
+        // Restore text colors for unselected
+        if (btn.id === 'filter-profit') { btn.classList.add('text-emerald-600', 'dark:text-emerald-400'); btn.classList.remove('text-white'); }
+        if (btn.id === 'filter-loss') { btn.classList.add('text-red-600', 'dark:text-red-400'); btn.classList.remove('text-white'); }
+        if (btn.id === 'filter-sales') { btn.classList.add('text-amber-600', 'dark:text-amber-400'); btn.classList.remove('text-white'); }
+        if (btn.id === 'filter-all') { btn.classList.add('text-slate-700', 'dark:text-slate-300'); btn.classList.remove('text-white'); }
+    });
+
+    const activeBtn = document.getElementById('filter-' + type);
+    if (activeBtn) {
+        // Remove individual colors so white text applies
+        if (type === 'profit') activeBtn.classList.remove('text-emerald-600', 'dark:text-emerald-400');
+        if (type === 'loss') activeBtn.classList.remove('text-red-600', 'dark:text-red-400');
+        if (type === 'sales') activeBtn.classList.remove('text-amber-600', 'dark:text-amber-400');
+        if (type === 'all') activeBtn.classList.remove('text-slate-700', 'dark:text-slate-300');
+        
+        activeBtn.className = `filter-btn active-filter px-4 py-1.5 rounded-full text-sm font-semibold transition-colors bg-indigo-600 border-indigo-600 text-white shadow-sm whitespace-nowrap`;
+        if (type === 'profit') activeBtn.id = 'filter-profit';
+        if (type === 'loss') activeBtn.id = 'filter-loss';
+        if (type === 'sales') activeBtn.id = 'filter-sales';
+        if (type === 'all') activeBtn.id = 'filter-all';
+    }
+    
+    renderTable();
+}
+
+function applySortAndFilter() {
+    currentSortType = document.getElementById('sort-dropdown').value;
+    renderTable();
+}
+// --- END HELPER FUNCTIONS ---
+
 function renderTable() {
   const tbody = document.getElementById("table-body");
   tbody.innerHTML = "";
 
-  appData.forEach((row) => {
+  const displayData = getFilteredAndSortedData();
+  const topBrands = getTopBrands(appData); // compute top 3 from full data
+
+  displayData.forEach((row) => {
     if (!row.dqty) row.dqty = { q: "", p: "", n: "" };
+    
+    const rank = topBrands[row.id];
+    let highlightClass = "hover:bg-slate-50 dark:hover:bg-slate-800/50";
+    let badgeHtml = "";
+    
+    if (rank === 1) {
+        highlightClass = "bg-amber-50/30 dark:bg-amber-900/10 hover:bg-amber-50/50 dark:hover:bg-amber-900/20 shadow-[inset_4px_0_0_0_#fbbf24]";
+        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-amber-300 to-amber-500 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥇 TOP 1</div>`;
+    } else if (rank === 2) {
+        highlightClass = "bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 shadow-[inset_4px_0_0_0_#94a3b8]";
+        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-slate-200 to-slate-400 text-slate-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥈 TOP 2</div>`;
+    } else if (rank === 3) {
+        highlightClass = "bg-orange-50/20 dark:bg-orange-900/10 hover:bg-orange-50/40 dark:hover:bg-orange-900/20 shadow-[inset_4px_0_0_0_#fdba74]";
+        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-orange-200 to-orange-400 text-orange-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥉 TOP 3</div>`;
+    }
+
     const tr = document.createElement("tr");
-    tr.className =
-      "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group";
+    tr.className = `${highlightClass} transition-colors group relative`;
 
     const renderInput = (field, size, isLast) => `
                     <td class="p-1 ${isLast ? "border-r-2 border-slate-400 dark:border-slate-500" : "border-r border-slate-200 dark:border-slate-700"}">
@@ -600,7 +733,8 @@ function renderTable() {
                 `;
 
     tr.innerHTML = `
-                    <td class="sticky-col bg-white dark:bg-darkCard p-0.5 md:p-1 border-r border-slate-300 dark:border-slate-600 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80 transition-colors z-10">
+                    <td class="sticky-col bg-white dark:bg-darkCard p-0.5 md:p-1 border-r border-slate-300 dark:border-slate-600 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80 transition-colors z-10 relative">
+                        ${badgeHtml}
                         <input type="text" value="${row.name}" placeholder="Brand" oninput="updateData('${row.id}', 'name', null, this.value)" 
                         class="w-[60px] md:w-full md:min-w-[120px] p-1 md:p-2 bg-white dark:bg-darkBg border border-slate-300 dark:border-slate-600 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none font-medium transition-all shadow-inner text-xs md:text-sm">
                     </td>
@@ -656,16 +790,9 @@ function renderTable() {
 
 // Features
 function filterTable() {
-  const term = document.getElementById("search-input").value.toLowerCase();
-  const rows = document.querySelectorAll("#table-body tr");
-  rows.forEach((tr) => {
-    const input = tr.querySelector("td:first-child input");
-    if (input && input.value.toLowerCase().includes(term)) {
-      tr.style.display = "";
-    } else {
-      tr.style.display = "none";
-    }
-  });
+    // Instead of hiding rows, we rely on our getFilteredAndSortedData()
+    // which applies the search term automatically. We just trigger a re-render.
+    renderTable();
 }
 
 function toggleDarkMode() {
@@ -999,23 +1126,22 @@ function renderCardList() {
   const container = document.getElementById('mobile-card-list');
   if (!container) return;
 
-  if (appData.length === 0) {
+  const displayData = getFilteredAndSortedData();
+  const topBrands = getTopBrands(appData);
+
+  if (displayData.length === 0) {
     container.innerHTML = `
       <div class="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500">
         <i class="fa-solid fa-wine-bottle text-4xl mb-3 opacity-40"></i>
-        <p class="text-sm">No brands yet. Tap <b>Add Brand Row</b> below to get started.</p>
+        <p class="text-sm">No matching brands found. ${appData.length === 0 ? 'Tap <b>Add Brand Row</b> below to get started.' : ''}</p>
       </div>`;
     return;
   }
 
   let html = '';
-  const searchTerm = (document.getElementById('search-input')?.value || '').toLowerCase();
 
-  appData.forEach((row) => {
+  displayData.forEach((row) => {
     if (!row.dqty) row.dqty = { q: '', p: '', n: '' };
-
-    // Filter by search
-    if (searchTerm && !(row.name || '').toLowerCase().includes(searchTerm)) return;
 
     // Compute totals
     let totalMrpProfit = 0, totalDiscProfit = 0, totalBottles = 0;
@@ -1038,10 +1164,24 @@ function renderCardList() {
         ? 'color:#dc2626' // red
         : 'color:#64748b';
 
-    const brandLabel = row.name || '<span style="color:#94a3b8;font-style:italic">Unnamed Brand</span>';
+    const rank = topBrands[row.id];
+    let cardStyle = "";
+    let badgeHtml = "";
+    
+    if (rank === 1) {
+        cardStyle = "ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700";
+        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-amber-300 to-amber-500 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥇 TOP 1</div>`;
+    } else if (rank === 2) {
+        cardStyle = "ring-2 ring-slate-300 bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-600";
+        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-slate-200 to-slate-400 text-slate-800 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥈 TOP 2</div>`;
+    } else if (rank === 3) {
+        cardStyle = "ring-2 ring-orange-300 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800";
+        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-orange-200 to-orange-400 text-orange-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥉 TOP 3</div>`;
+    }
 
     html += `
-      <div class="mobile-brand-card" onclick="openMobileEditModal('${row.id}')">
+      <div class="mobile-brand-card relative ${cardStyle}" onclick="openMobileEditModal('${row.id}')">
+        ${badgeHtml}
         <div class="mobile-card-icon">
           <i class="fa-solid fa-wine-bottle"></i>
         </div>
@@ -1231,12 +1371,8 @@ function openBargainModalFromMobile() {
 }
 
 
-// Patch filterTable so searching also re-renders the mobile card list
-const _origFilterTable = filterTable;
-filterTable = function() {
-  _origFilterTable();
-  renderCardList();
-};
+// filterTable is now cleanly decoupled, so we don't need a patch
+// (renderTable automatically calls renderCardList internally)
 
 // Initialization
 window.onload = () => {
