@@ -28,6 +28,9 @@ let saveTimeout = null;
 let currentSortType = 'default';
 let currentFilterType = 'all';
 
+let historySortType = 'default';
+let historyFilterType = 'all';
+
 // Auth State Observer
 // signInWithPopup is used (not signInWithRedirect) because this app is hosted
 // on GitHub Pages, which does NOT support the /__/firebase/init.json endpoint
@@ -691,6 +694,68 @@ function applySortAndFilter() {
     currentSortType = document.getElementById('sort-dropdown').value;
     renderTable();
 }
+
+function getProcessedHistoryData(data) {
+    let result = [...data];
+
+    // FILTER
+    if (historyFilterType === 'profit') {
+        result = result.filter(row => calculateBrandProfit(row) > 0);
+    } else if (historyFilterType === 'loss') {
+        result = result.filter(row => calculateBrandProfit(row) < 0);
+    } else if (historyFilterType === 'sales') {
+        result = result.filter(row => calculateTotalSales(row) > 10);
+    }
+
+    // SORT
+    if (historySortType === 'profit-high') {
+        result.sort((a, b) => calculateBrandProfit(b) - calculateBrandProfit(a));
+    } else if (historySortType === 'profit-low') {
+        result.sort((a, b) => calculateBrandProfit(a) - calculateBrandProfit(b));
+    } else if (historySortType === 'name-asc') {
+        result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+
+    return result;
+}
+
+function setHistoryFilter(type) {
+    historyFilterType = type;
+    
+    // Update button styles
+    document.querySelectorAll('.hfilter-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm', 'border-indigo-600', 'active-filter');
+        btn.classList.add('bg-white', 'dark:bg-darkCard', 'border', 'border-slate-200', 'dark:border-slate-700', 'hover:bg-slate-50', 'dark:hover:bg-slate-800');
+        
+        // Restore text colors for unselected
+        if (btn.id === 'hfilter-profit') { btn.classList.add('text-emerald-600', 'dark:text-emerald-400'); btn.classList.remove('text-white'); }
+        if (btn.id === 'hfilter-loss') { btn.classList.add('text-red-600', 'dark:text-red-400'); btn.classList.remove('text-white'); }
+        if (btn.id === 'hfilter-sales') { btn.classList.add('text-amber-600', 'dark:text-amber-400'); btn.classList.remove('text-white'); }
+        if (btn.id === 'hfilter-all') { btn.classList.add('text-slate-700', 'dark:text-slate-300'); btn.classList.remove('text-white'); }
+    });
+
+    const activeBtn = document.getElementById('hfilter-' + type);
+    if (activeBtn) {
+        // Remove individual colors so white text applies
+        if (type === 'profit') activeBtn.classList.remove('text-emerald-600', 'dark:text-emerald-400');
+        if (type === 'loss') activeBtn.classList.remove('text-red-600', 'dark:text-red-400');
+        if (type === 'sales') activeBtn.classList.remove('text-amber-600', 'dark:text-amber-400');
+        if (type === 'all') activeBtn.classList.remove('text-slate-700', 'dark:text-slate-300');
+        
+        activeBtn.className = `hfilter-btn active-filter px-3 py-1.5 rounded-full text-sm font-semibold transition-colors bg-indigo-600 border border-indigo-600 text-white shadow-sm whitespace-nowrap`;
+        if (type === 'profit') activeBtn.id = 'hfilter-profit';
+        if (type === 'loss') activeBtn.id = 'hfilter-loss';
+        if (type === 'sales') activeBtn.id = 'hfilter-sales';
+        if (type === 'all') activeBtn.id = 'hfilter-all';
+    }
+    
+    renderHistoryFeed();
+}
+
+function setHistorySort(type) {
+    historySortType = type;
+    renderHistoryFeed();
+}
 // --- END HELPER FUNCTIONS ---
 
 function renderTable() {
@@ -833,12 +898,15 @@ function renderHistoryFeed() {
   const reversed = [...historyData].reverse();
 
   reversed.forEach((record) => {
-    let totalBrands = record.data.length;
+    const processedData = getProcessedHistoryData(record.data);
+    const topBrands = getTopBrands(processedData);
+
+    let totalBrands = processedData.length;
     let totalBottles = 0;
     let grandTotalProfit = 0;
 
     // pre-calculate summary
-    record.data.forEach((row) => {
+    processedData.forEach((row) => {
       ["q", "p", "n"].forEach((s) => {
         const m = parseFloat(row.mrp[s]) || 0;
         const d = parseFloat(row.discount[s]) || 0;
@@ -901,7 +969,7 @@ function renderHistoryFeed() {
     });
     tableHtml += `</tr></thead><tbody class="divide-y divide-slate-200 dark:divide-slate-700">`;
 
-    record.data.forEach((row) => {
+    processedData.forEach((row) => {
       let bp = 0;
       let totalMrp = 0,
         totalDisc = 0;
@@ -924,8 +992,23 @@ function renderHistoryFeed() {
       const tdRedMoney = (val) =>
         `<td class="p-2 border-r border-slate-200 dark:border-slate-700 text-right font-bold text-red-600 dark:text-red-400 bg-red-50/20 dark:bg-red-900/10 whitespace-nowrap">₹${formatMoney(val)}</td>`;
 
-      tableHtml += `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td class="sticky-col bg-white dark:bg-darkCard p-1 md:p-2 border-r border-slate-200 dark:border-slate-700 font-bold z-10 text-[10px] md:text-xs truncate max-w-[60px] md:max-w-[120px]" title="${row.name || "-"}">${row.name || "-"}</td>
+      const rank = topBrands[row.id];
+      let highlightClass = "hover:bg-slate-50 dark:hover:bg-slate-800/50";
+      let badgeHtml = "";
+      
+      if (rank === 1) {
+          highlightClass = "bg-amber-50/30 dark:bg-amber-900/10 hover:bg-amber-50/50 dark:hover:bg-amber-900/20 shadow-[inset_4px_0_0_0_#fbbf24]";
+          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-amber-300 to-amber-500 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥇 TOP 1</div>`;
+      } else if (rank === 2) {
+          highlightClass = "bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 shadow-[inset_4px_0_0_0_#94a3b8]";
+          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-slate-200 to-slate-400 text-slate-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥈 TOP 2</div>`;
+      } else if (rank === 3) {
+          highlightClass = "bg-orange-50/20 dark:bg-orange-900/10 hover:bg-orange-50/40 dark:hover:bg-orange-900/20 shadow-[inset_4px_0_0_0_#fdba74]";
+          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-orange-200 to-orange-400 text-orange-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥉 TOP 3</div>`;
+      }
+
+      tableHtml += `<tr class="${highlightClass} transition-colors group relative">
+                        <td class="sticky-col bg-white dark:bg-darkCard p-1 md:p-2 border-r border-slate-200 dark:border-slate-700 font-bold z-10 text-[10px] md:text-xs truncate max-w-[60px] md:max-w-[120px] relative" title="${row.name || "-"}">${badgeHtml}${row.name || "-"}</td>
                         ${tdText(row.mrp.q, false)}${tdText(row.mrp.p, false)}${tdText(row.mrp.n, true)}
                         ${tdText(row.discount.q, false)}${tdText(row.discount.p, false)}${tdText(row.discount.n, true)}
                         ${tdText(row.cost.q, false)}${tdText(row.cost.p, false)}${tdText(row.cost.n, true)}
@@ -939,7 +1022,7 @@ function renderHistoryFeed() {
     });
     // Build mobile brand card list (mobile only)
     let mobileBrandsHtml = `<div id="mobile_brands_${record.id}" class="mobile-history-brands" style="display:none">`;
-    record.data.forEach((row, rowIdx) => {
+    processedData.forEach((row) => {
       let rowMrp = 0, rowDisc = 0, rowBottles = 0;
       ['q','p','n'].forEach((s) => {
         const m = parseFloat(row.mrp?.[s])      || 0;
@@ -954,8 +1037,25 @@ function renderHistoryFeed() {
       const rowExtra = parseFloat(row.extraDiscount) || 0;
       const rowBp = rowMrp + rowDisc - rowExtra;
       const rowProfitColor = rowBp > 0 ? 'color:#059669' : rowBp < 0 ? 'color:#dc2626' : 'color:#64748b';
+      
+      const rank = topBrands[row.id];
+      let cardStyle = "";
+      let badgeHtml = "";
+      
+      if (rank === 1) {
+          cardStyle = "ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700";
+          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-amber-300 to-amber-500 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥇 TOP 1</div>`;
+      } else if (rank === 2) {
+          cardStyle = "ring-2 ring-slate-300 bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-600";
+          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-slate-200 to-slate-400 text-slate-800 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥈 TOP 2</div>`;
+      } else if (rank === 3) {
+          cardStyle = "ring-2 ring-orange-300 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800";
+          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-orange-200 to-orange-400 text-orange-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥉 TOP 3</div>`;
+      }
+
       mobileBrandsHtml += `
-        <div class="mobile-brand-card" onclick="openHistoryBrandModal('${record.id}', ${rowIdx})">
+        <div class="mobile-brand-card relative ${cardStyle}" onclick="openHistoryBrandModal('${record.id}', '${row.id}')">
+          ${badgeHtml}
           <div class="mobile-card-icon"><i class="fa-solid fa-wine-bottle"></i></div>
           <div class="mobile-card-body">
             <div class="mobile-card-name">${row.name || 'Unnamed Brand'}</div>
@@ -1037,12 +1137,13 @@ let _histBrandRow    = null;
 /**
  * Opens a read-only bottom-sheet showing all field values for a historical brand entry.
  */
-function openHistoryBrandModal(recordId, rowIdx) {
+function openHistoryBrandModal(recordId, rowId) {
   const record = historyData.find((r) => r.id === recordId);
-  if (!record || !record.data[rowIdx]) return;
+  if (!record) return;
+  const row = record.data.find((r) => r.id === rowId);
+  if (!row) return;
   _histBrandRecord = record;
-  _histBrandRow    = record.data[rowIdx];
-  const row = _histBrandRow;
+  _histBrandRow    = row;
 
   // Header
   const el = (id) => document.getElementById(id);

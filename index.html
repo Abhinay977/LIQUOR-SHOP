@@ -220,12 +220,30 @@
         <!-- History Content (sibling of main-app-content, NOT nested inside it) -->
         <div id="history-content" class="hidden flex-grow" style="flex-direction: column;">
             <!-- History Toolbar -->
-            <div class="flex justify-between items-center mb-6 bg-white dark:bg-darkCard p-4 rounded-xl shadow border border-slate-200 dark:border-darkBorder">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 bg-white dark:bg-darkCard p-4 rounded-xl shadow border border-slate-200 dark:border-darkBorder gap-4">
                 <div class="flex items-center gap-4">
                     <button onclick="toggleHistoryMode()" class="text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                         <i class="fa-solid fa-arrow-left text-xl"></i>
                     </button>
                     <h2 class="text-xl font-bold text-slate-800 dark:text-slate-200">Historical Data Viewer</h2>
+                </div>
+                
+                <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                    <!-- History Filters -->
+                    <div class="flex gap-2 overflow-x-auto hide-scrollbar" id="history-filter-buttons">
+                        <button onclick="setHistoryFilter('all')" id="hfilter-all" class="hfilter-btn px-3 py-1.5 rounded-full text-sm font-semibold transition-colors bg-indigo-600 border border-indigo-600 text-white shadow-sm whitespace-nowrap active-filter">All</button>
+                        <button onclick="setHistoryFilter('profit')" id="hfilter-profit" class="hfilter-btn px-3 py-1.5 rounded-full text-sm font-medium transition-colors bg-white dark:bg-darkCard border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap text-emerald-600 dark:text-emerald-400">Profit</button>
+                        <button onclick="setHistoryFilter('loss')" id="hfilter-loss" class="hfilter-btn px-3 py-1.5 rounded-full text-sm font-medium transition-colors bg-white dark:bg-darkCard border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap text-red-600 dark:text-red-400">Loss</button>
+                        <button onclick="setHistoryFilter('sales')" id="hfilter-sales" class="hfilter-btn px-3 py-1.5 rounded-full text-sm font-medium transition-colors bg-white dark:bg-darkCard border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap text-amber-600 dark:text-amber-400">High Sales</button>
+                    </div>
+                    
+                    <!-- History Sort -->
+                    <select id="history-sort-dropdown" onchange="setHistorySort(this.value)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-darkBorder bg-white dark:bg-darkCard focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200">
+                        <option value="default">Default Sorting</option>
+                        <option value="profit-high">Profit: High &rarr; Low</option>
+                        <option value="profit-low">Profit: Low &rarr; High</option>
+                        <option value="name-asc">Brand Name: A &rarr; Z</option>
+                    </select>
                 </div>
             </div>
 
