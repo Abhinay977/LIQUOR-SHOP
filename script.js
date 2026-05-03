@@ -692,7 +692,40 @@ function setFilter(type) {
 
 function applySortAndFilter() {
     currentSortType = document.getElementById('sort-dropdown').value;
+
+    const label = document.getElementById("active-sort-label");
+    if (label) {
+        if (currentSortType === "profit-high") {
+            label.textContent = "Sorted by: Highest Profit";
+        } else if (currentSortType === "profit-low") {
+            label.textContent = "Sorted by: Lowest Profit";
+        } else if (currentSortType === "name-asc") {
+            label.textContent = "Sorted by: Name A → Z";
+        } else {
+            label.textContent = "";
+        }
+    }
+
     renderTable();
+}
+
+function updateInsights(data) {
+    const el = document.getElementById("insight-box");
+    if (!el) return;
+    if (!data.length) {
+        el.textContent = "";
+        return;
+    }
+
+    const sortedData = [...data].sort((a, b) => calculateBrandProfit(b) - calculateBrandProfit(a));
+    const top = sortedData[0];
+    const profit = calculateBrandProfit(top);
+
+    if (profit > 0) {
+        el.textContent = `🔥 Top Brand: ${top.name || "Unnamed"} (₹${profit.toFixed(0)})`;
+    } else {
+        el.textContent = "";
+    }
 }
 
 function getProcessedHistoryData(data) {
@@ -760,10 +793,16 @@ function setHistorySort(type) {
 
 function renderTable() {
   const tbody = document.getElementById("table-body");
+  tbody.style.opacity = "0.3";
+  setTimeout(() => {
+    tbody.style.opacity = "1";
+  }, 150);
   tbody.innerHTML = "";
 
   const displayData = getFilteredAndSortedData();
   const topBrands = getTopBrands(appData); // compute top 3 from full data
+  
+  updateInsights(displayData);
 
   displayData.forEach((row) => {
     if (!row.dqty) row.dqty = { q: "", p: "", n: "" };
@@ -773,18 +812,18 @@ function renderTable() {
     let badgeHtml = "";
     
     if (rank === 1) {
-        highlightClass = "bg-amber-50/30 dark:bg-amber-900/10 hover:bg-amber-50/50 dark:hover:bg-amber-900/20 shadow-[inset_4px_0_0_0_#fbbf24]";
-        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-amber-300 to-amber-500 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥇 TOP 1</div>`;
+        highlightClass = "bg-gradient-to-r from-yellow-100 to-yellow-50 dark:from-yellow-900/30 dark:to-yellow-900/10 ring-2 ring-yellow-400 scale-[1.01]";
+        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥇 TOP 1</div>`;
     } else if (rank === 2) {
-        highlightClass = "bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 shadow-[inset_4px_0_0_0_#94a3b8]";
+        highlightClass = "bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-700 ring-1 ring-slate-400";
         badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-slate-200 to-slate-400 text-slate-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥈 TOP 2</div>`;
     } else if (rank === 3) {
-        highlightClass = "bg-orange-50/20 dark:bg-orange-900/10 hover:bg-orange-50/40 dark:hover:bg-orange-900/20 shadow-[inset_4px_0_0_0_#fdba74]";
+        highlightClass = "bg-gradient-to-r from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-900/10 ring-1 ring-orange-300";
         badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-orange-200 to-orange-400 text-orange-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥉 TOP 3</div>`;
     }
 
     const tr = document.createElement("tr");
-    tr.className = `${highlightClass} transition-colors group relative`;
+    tr.className = `${highlightClass} hover:scale-[1.01] transition-all duration-200 group relative`;
 
     const renderInput = (field, size, isLast) => `
                     <td class="p-1 ${isLast ? "border-r-2 border-slate-400 dark:border-slate-500" : "border-r border-slate-200 dark:border-slate-700"}">
@@ -997,17 +1036,17 @@ function renderHistoryFeed() {
       let badgeHtml = "";
       
       if (rank === 1) {
-          highlightClass = "bg-amber-50/30 dark:bg-amber-900/10 hover:bg-amber-50/50 dark:hover:bg-amber-900/20 shadow-[inset_4px_0_0_0_#fbbf24]";
-          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-amber-300 to-amber-500 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥇 TOP 1</div>`;
+          highlightClass = "bg-gradient-to-r from-yellow-100 to-yellow-50 dark:from-yellow-900/30 dark:to-yellow-900/10 ring-2 ring-yellow-400 scale-[1.01]";
+          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥇 TOP 1</div>`;
       } else if (rank === 2) {
-          highlightClass = "bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 shadow-[inset_4px_0_0_0_#94a3b8]";
+          highlightClass = "bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-700 ring-1 ring-slate-400";
           badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-slate-200 to-slate-400 text-slate-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥈 TOP 2</div>`;
       } else if (rank === 3) {
-          highlightClass = "bg-orange-50/20 dark:bg-orange-900/10 hover:bg-orange-50/40 dark:hover:bg-orange-900/20 shadow-[inset_4px_0_0_0_#fdba74]";
+          highlightClass = "bg-gradient-to-r from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-900/10 ring-1 ring-orange-300";
           badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-orange-200 to-orange-400 text-orange-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded shadow z-20">🥉 TOP 3</div>`;
       }
 
-      tableHtml += `<tr class="${highlightClass} transition-colors group relative">
+      tableHtml += `<tr class="${highlightClass} hover:scale-[1.01] transition-all duration-200 group relative">
                         <td class="sticky-col bg-white dark:bg-darkCard p-1 md:p-2 border-r border-slate-200 dark:border-slate-700 font-bold z-10 text-[10px] md:text-xs truncate max-w-[60px] md:max-w-[120px] relative" title="${row.name || "-"}">${badgeHtml}${row.name || "-"}</td>
                         ${tdText(row.mrp.q, false)}${tdText(row.mrp.p, false)}${tdText(row.mrp.n, true)}
                         ${tdText(row.discount.q, false)}${tdText(row.discount.p, false)}${tdText(row.discount.n, true)}
@@ -1043,18 +1082,18 @@ function renderHistoryFeed() {
       let badgeHtml = "";
       
       if (rank === 1) {
-          cardStyle = "ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700";
-          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-amber-300 to-amber-500 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥇 TOP 1</div>`;
+          cardStyle = "bg-gradient-to-r from-yellow-100 to-yellow-50 dark:from-yellow-900/30 dark:to-yellow-900/10 ring-2 ring-yellow-400 scale-[1.01]";
+          badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥇 TOP 1</div>`;
       } else if (rank === 2) {
-          cardStyle = "ring-2 ring-slate-300 bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-600";
+          cardStyle = "bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-700 ring-1 ring-slate-400";
           badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-slate-200 to-slate-400 text-slate-800 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥈 TOP 2</div>`;
       } else if (rank === 3) {
-          cardStyle = "ring-2 ring-orange-300 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800";
+          cardStyle = "bg-gradient-to-r from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-900/10 ring-1 ring-orange-300";
           badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-orange-200 to-orange-400 text-orange-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥉 TOP 3</div>`;
       }
 
       mobileBrandsHtml += `
-        <div class="mobile-brand-card relative ${cardStyle}" onclick="openHistoryBrandModal('${record.id}', '${row.id}')">
+        <div class="mobile-brand-card relative ${cardStyle} hover:scale-[1.01] transition-all duration-200" onclick="openHistoryBrandModal('${record.id}', '${row.id}')">
           ${badgeHtml}
           <div class="mobile-card-icon"><i class="fa-solid fa-wine-bottle"></i></div>
           <div class="mobile-card-body">
@@ -1070,15 +1109,15 @@ function renderHistoryFeed() {
     tableHtml += `</tbody></table></div>`;
 
     feedHtml += `
-                <div class="bg-white dark:bg-darkCard p-5 rounded-xl shadow border border-slate-200 dark:border-darkBorder flex flex-col gap-4">
+                <div class="bg-white dark:bg-darkCard p-5 rounded-xl shadow border border-slate-200 dark:border-darkBorder flex flex-col gap-4 border-l-4 border-indigo-500 pl-4">
                     <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-3">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg">
                                 <i class="fa-solid fa-calendar-check"></i>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200">${record.date}</h3>
-                                <p class="text-xs text-slate-500 dark:text-slate-400"><i class="fa-regular fa-clock"></i> ${timeStr}</p>
+                                <h3 class="text-lg font-bold bg-indigo-100 dark:bg-indigo-900/30 px-3 py-1 rounded-lg inline-block text-indigo-800 dark:text-indigo-200">${record.date}</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1"><i class="fa-regular fa-clock"></i> ${timeStr}</p>
                             </div>
                         </div>
                         <div class="flex gap-2 relative">
@@ -1270,18 +1309,18 @@ function renderCardList() {
     let badgeHtml = "";
     
     if (rank === 1) {
-        cardStyle = "ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700";
-        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-amber-300 to-amber-500 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥇 TOP 1</div>`;
+        cardStyle = "bg-gradient-to-r from-yellow-100 to-yellow-50 dark:from-yellow-900/30 dark:to-yellow-900/10 ring-2 ring-yellow-400 scale-[1.01]";
+        badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥇 TOP 1</div>`;
     } else if (rank === 2) {
-        cardStyle = "ring-2 ring-slate-300 bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-600";
+        cardStyle = "bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-700 ring-1 ring-slate-400";
         badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-slate-200 to-slate-400 text-slate-800 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥈 TOP 2</div>`;
     } else if (rank === 3) {
-        cardStyle = "ring-2 ring-orange-300 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800";
+        cardStyle = "bg-gradient-to-r from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-900/10 ring-1 ring-orange-300";
         badgeHtml = `<div class="absolute -top-2 -left-2 bg-gradient-to-r from-orange-200 to-orange-400 text-orange-900 text-[10px] font-extrabold px-2 py-0.5 rounded shadow z-10">🥉 TOP 3</div>`;
     }
 
     html += `
-      <div class="mobile-brand-card relative ${cardStyle}" onclick="openMobileEditModal('${row.id}')">
+      <div class="mobile-brand-card relative ${cardStyle} hover:scale-[1.01] transition-all duration-200" onclick="openMobileEditModal('${row.id}')">
         ${badgeHtml}
         <div class="mobile-card-icon">
           <i class="fa-solid fa-wine-bottle"></i>

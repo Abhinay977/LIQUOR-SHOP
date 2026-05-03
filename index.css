@@ -61,6 +61,14 @@ input[type="number"] {
     background: #64748b;
 }
 
+.filter-btn, .hfilter-btn {
+    transition: all 0.2s ease;
+}
+
+.filter-btn:active, .hfilter-btn:active {
+    transform: scale(0.92);
+}
+
 /* =============================================
    MOBILE CARD VIEW + EDIT MODAL
    ============================================= */
