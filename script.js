@@ -743,6 +743,7 @@ async function exportData(format, recordId) {
   );
   const fileName = `Liquor_Shop_Export_${safeDateStr}`;
 
+  try {
   const needsScreenshot = ["pdf", "png", "jpeg", "word"].includes(format);
   let canvas = null;
   let imgData = null;
@@ -766,11 +767,11 @@ async function exportData(format, recordId) {
     ];
 
     let html = `
-      <div style="font-family: system-ui, -apple-system, sans-serif; background:${bg}; color:${text}; padding:16px; display:inline-block; min-width:100%; width:max-content;">
+      <div style="font-family: system-ui, -apple-system, sans-serif; background:${bg}; color:${text}; padding:16px; display:inline-block; min-width:100%; width:100%; max-width:1200px;">
         <h2 style="text-align:center; font-size:16px; font-weight:700; margin:0 0 12px 0; color:${text};">
           Liquor Shop — ${recordId ? (historyData.find(r=>r.id===recordId)?.date || "History") : new Date().toLocaleDateString()}
         </h2>
-        <table style="border-collapse:separate; border-spacing:0; border-top:1px solid ${borderColor}; border-left:1px solid ${borderColor}; font-size:11px; min-width:100%; width:max-content; table-layout:auto;">
+        <table style="border-collapse:separate; border-spacing:0; border-top:1px solid ${borderColor}; border-left:1px solid ${borderColor}; font-size:11px; min-width:100%; width:100%; max-width:1200px; table-layout:auto;">
           <thead>
             <tr style="background:${hdrBg};">
               <th rowspan="2" style="padding:8px 10px; border-right:1px solid ${borderColor}; border-bottom:1px solid ${borderColor}; text-align:left; white-space:nowrap; vertical-align:middle;">Brand</th>
@@ -819,39 +820,41 @@ async function exportData(format, recordId) {
 
     html += `</tbody></table></div>`;
 
-    // Mount the wrapper far out of view vertically.
-    // We avoid opacity:0 or display:none as html2canvas copies those exactly.
-    // We avoid left:-9999px as some browsers cull horizontally offscreen elements.
     const wrapper = document.createElement("div");
-    wrapper.style.cssText = "position:absolute; top:-99999px; left:0; width:max-content; min-width:100%; z-index:-9999;";
+    wrapper.style.position = "fixed";
+    wrapper.style.top = "0";
+    wrapper.style.left = "0";
+    wrapper.style.zIndex = "-1";
+    wrapper.style.opacity = "0";
     wrapper.innerHTML = html;
     document.body.appendChild(wrapper);
 
     try {
       // Trigger a synchronous reflow
       void wrapper.offsetHeight;
-      await new Promise(r => setTimeout(r, 400));
+      await document.fonts.ready;
+      await new Promise(resolve => requestAnimationFrame(() => resolve()));
 
       canvas = await html2canvas(wrapper, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
-        backgroundColor: bg,
-        logging: false
+        backgroundColor: "#ffffff",
+        logging: false,
+        windowWidth: wrapper.scrollWidth,
+        windowHeight: wrapper.scrollHeight
       });
+
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        throw new Error("Canvas is empty");
+      }
+
+      imgData = canvas.toDataURL(format === "png" ? "image/png" : "image/jpeg", 1.0);
     } catch (err) {
       console.error("Screenshot Error:", err);
-      alert("An error occurred while generating the image.");
-      return;
+      throw new Error("An error occurred while generating the image: " + err.message);
     } finally {
       if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
     }
-
-    if (!canvas || canvas.width === 0 || canvas.height === 0) {
-      alert("Failed to capture the table. The image was empty.");
-      return;
-    }
-
-    imgData = canvas.toDataURL(format === "png" ? "image/png" : "image/jpeg", 1.0);
   }
 
   // Export based on selected format
@@ -859,9 +862,16 @@ async function exportData(format, recordId) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF("l", "mm", "a4");
     const pdfWidth = doc.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    
+    const imgWidth = pdfWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+    if (imgHeight > doc.internal.pageSize.getHeight()) {
+      doc.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
+    } else {
+      doc.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
+    }
+
     doc.save(`${fileName}.pdf`);
   } else if (format === "png" || format === "jpeg") {
     canvas.toBlob(
@@ -953,6 +963,10 @@ async function exportData(format, recordId) {
     } else {
       XLSX.writeFile(workbook, `${fileName}.csv`);
     }
+  }
+  } catch (err) {
+    console.error("Export Error:", err);
+    alert("An error occurred during export: " + err.message);
   }
 }
 
