@@ -712,8 +712,14 @@ function applySortAndFilter() {
 function updateInsights(data) {
     const el = document.getElementById("insight-box");
     if (!el) return;
+
+    let filterText = "";
+    if (currentFilterType === 'loss') filterText = "Showing Loss Data Only";
+    else if (currentFilterType === 'profit') filterText = "Showing Profit Data Only";
+    else if (currentFilterType === 'sales') filterText = "Showing High Sales Only";
+
     if (!data.length) {
-        el.textContent = "";
+        el.textContent = filterText;
         return;
     }
 
@@ -722,9 +728,9 @@ function updateInsights(data) {
     const profit = calculateBrandProfit(top);
 
     if (profit > 0) {
-        el.textContent = `🔥 Top Brand: ${top.name || "Unnamed"} (₹${profit.toFixed(0)})`;
+        el.textContent = filterText ? `${filterText} | 🔥 Top Brand: ${top.name || "Unnamed"} (₹${profit.toFixed(0)})` : `🔥 Top Brand: ${top.name || "Unnamed"} (₹${profit.toFixed(0)})`;
     } else {
-        el.textContent = "";
+        el.textContent = filterText;
     }
 }
 
@@ -803,6 +809,19 @@ function renderTable() {
   const topBrands = getTopBrands(appData); // compute top 3 from full data
   
   updateInsights(displayData);
+
+  if (displayData.length === 0) {
+      tbody.innerHTML = `
+          <tr>
+              <td colspan="100%" class="text-center py-6 text-slate-400">
+                  No data found for selected filter
+              </td>
+          </tr>
+      `;
+      updateDashboard();
+      renderCardList();
+      return;
+  }
 
   displayData.forEach((row) => {
     if (!row.dqty) row.dqty = { q: "", p: "", n: "" };
@@ -938,6 +957,11 @@ function renderHistoryFeed() {
 
   reversed.forEach((record) => {
     const processedData = getProcessedHistoryData(record.data);
+    
+    if (processedData.length === 0) {
+        return; // skip this record completely if no data matches the filter
+    }
+
     const topBrands = getTopBrands(processedData);
 
     let totalBrands = processedData.length;
@@ -1149,6 +1173,12 @@ function renderHistoryFeed() {
   });
 
   feed.innerHTML = feedHtml;
+
+  if (!feedHtml.trim()) {
+      emptyState.classList.remove("hidden");
+  } else {
+      emptyState.classList.add("hidden");
+  }
 }
 
 
